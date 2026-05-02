@@ -172,25 +172,25 @@ export default function CommunityNotesScreen() {
 
   return (
     <div className="max-w-5xl">
-      <div className="mb-10 flex items-end justify-between">
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-text mb-2">Community Notes</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sub text-[17px]">
+          <h1 className="text-3xl md:text-4xl font-bold text-text mb-2">Community Notes</h1>
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-sub text-[15px] md:text-[17px]">
             {pathHistory.map((path, idx) => {
               const displayName = idx === 0 
                 ? formatDisplayName(userProfile?.selectedUniversityId || 'University')
                 : formatDisplayName(path.split('/').pop());
 
               return (
-                <span key={idx} className="flex items-center gap-2">
-                  {idx > 0 && <ChevronRight size={16} />}
+                <span key={idx} className="flex items-center gap-1.5 md:gap-2">
+                  {idx > 0 && <ChevronRight size={16} className="text-dim" />}
                   <button 
                     onClick={() => {
                       const newHistory = pathHistory.slice(0, idx + 1);
                       setPathHistory(newHistory);
                       setCurrentPath(path);
                     }} 
-                    className="hover:text-primary transition-colors truncate max-w-[150px] font-medium"
+                    className="hover:text-primary transition-colors truncate max-w-[120px] md:max-w-[150px] font-medium"
                   >
                     {displayName}
                   </button>
@@ -200,20 +200,20 @@ export default function CommunityNotesScreen() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
           {pathHistory.length > 1 && (
-            <button onClick={goBack} className="flex items-center gap-2 text-text hover:bg-surface/50 px-4 py-2 rounded-xl transition-colors font-medium">
+            <button onClick={goBack} className="flex shrink-0 items-center gap-1 md:gap-2 text-text hover:bg-surface/50 px-3 md:px-4 py-2 rounded-xl transition-colors font-medium">
               <ArrowLeft size={18} />
-              Back
+              <span className="hidden md:inline">Back</span>
             </button>
           )}
           {currentPath && (
             <>
-              <button onClick={handleCreateFolder} className="flex items-center gap-2 bg-surface/50 hover:bg-surface text-text px-4 py-2 rounded-xl font-medium transition-colors border border-border/50">
-                <Plus size={18} /> Folder
+              <button onClick={handleCreateFolder} className="flex shrink-0 items-center gap-1 md:gap-2 bg-surface/50 hover:bg-surface text-text px-3 md:px-4 py-2 rounded-xl font-medium transition-colors border border-border/50">
+                <Plus size={18} /> <span className="hidden md:inline">Folder</span>
               </button>
-              <button onClick={handleCreateNote} className="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded-xl font-medium transition-colors">
-                <Plus size={18} /> Note
+              <button onClick={handleCreateNote} className="flex shrink-0 items-center gap-1 md:gap-2 bg-primary/20 hover:bg-primary/30 text-primary px-3 md:px-4 py-2 rounded-xl font-medium transition-colors">
+                <Plus size={18} /> <span className="hidden md:inline">Note</span>
               </button>
             </>
           )}
