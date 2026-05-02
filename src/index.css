@@ -1,0 +1,84 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-sub: var(--sub);
+  --color-dim: var(--dim);
+  --color-primary: var(--primary);
+  --color-teal: var(--teal);
+  --color-red: var(--red);
+  --color-green: var(--green);
+  --color-peach: var(--peach);
+  --color-blue: var(--blue);
+  --color-gold: var(--gold);
+  --color-sky: var(--sky);
+  --color-lavender: var(--lavender);
+  --color-gray: var(--gray);
+}
+
+@layer base {
+  :root {
+    --bg: #EFF1F5;
+    --surface: #DCE0E8;
+    --card: #CCD0DA;
+    --border: #BCC0CC;
+    --text: #4C4F69;
+    --sub: #6C6F85;
+    --dim: #8C8FA1;
+    --primary: #8839EF;
+    --teal: #179299;
+    --red: #D20F39;
+    --green: #40A02B;
+    --peach: #FE640B;
+    --blue: #1E66F5;
+    --gold: #DF8E1D;
+    --sky: #04A5E5;
+    --lavender: #7287FD;
+    --gray: #9CA0B0;
+  }
+
+  .dark {
+    --bg: #1E1E2E;
+    --surface: #181825;
+    --card: #11111B;
+    --border: #313244;
+    --text: #CDD6F4;
+    --sub: #A6ADC8;
+    --dim: #7F849C;
+    --primary: #CBA6F7;
+    --teal: #94E2D5;
+    --red: #F38BA8;
+    --green: #A6E3A1;
+    --peach: #FAB387;
+    --blue: #89B4FA;
+    --gold: #F9E2AF;
+    --sky: #89DCEB;
+    --lavender: #B4BEFE;
+    --gray: #6C7086;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-nav {
+    background: color-mix(in srgb, var(--surface) 60%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+}
+
+/* Playfair Display Utility */
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
