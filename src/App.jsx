@@ -28,11 +28,14 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+import MobileWarningModal from './components/MobileWarningModal';
+
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <BrowserRouter>
+          <MobileWarningModal />
           <Routes>
             <Route path="/login" element={<LoginScreen />} />
             <Route 
