@@ -63,6 +63,12 @@ export default function AttendanceScreen() {
     return 'bg-red/20';
   };
 
+  const getPercentageSolidBgClass = (value) => {
+    if (value >= 75) return 'bg-green';
+    if (value >= 65) return 'bg-peach';
+    return 'bg-red';
+  };
+
   const getHeadline = (overall) => {
     if (overall >= 85) return 'Locked in';
     if (overall >= 75) return 'On track';
@@ -107,6 +113,7 @@ export default function AttendanceScreen() {
       const belowTargetCount = data.subjects.filter(s => s.percentage < 75).length;
       const colorClass = getPercentageColorClass(overall);
       const bgClass = getPercentageBgClass(overall);
+      const solidBgClass = getPercentageSolidBgClass(overall);
 
       return (
         <div className="flex-1 animate-fade-in pb-8">
@@ -117,7 +124,7 @@ export default function AttendanceScreen() {
             
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-5">
-                <div className={`w-14 h-14 rounded-2xl ${bgClass} flex items-center justify-center shadow-md shadow-${bgClass.replace('/20', '')}/20`}>
+                <div className={`w-14 h-14 rounded-2xl ${bgClass} flex items-center justify-center shadow-md shadow-${solidBgClass}/20`}>
                   <svg className={`w-7 h-7 ${colorClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
@@ -171,7 +178,7 @@ export default function AttendanceScreen() {
             {data.subjects.map((sub, i) => {
               const subColor = getPercentageColorClass(sub.percentage);
               const subBg = getPercentageBgClass(sub.percentage); // This now returns bg-green/20 etc
-              const solidBg = getPercentageBgClass(sub.percentage).replace('/20', '');
+              const solidBg = getPercentageSolidBgClass(sub.percentage);
               const missable = calculateMissable(sub.attendedClasses, sub.totalClasses);
               const needed = calculateNeeded(sub.attendedClasses, sub.totalClasses);
               
