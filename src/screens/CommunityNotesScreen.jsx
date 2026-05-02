@@ -133,11 +133,35 @@ export default function CommunityNotesScreen() {
     }
   };
 
-  const getIconForFolder = (path) => {
+  const getIconForFolder = (path, name) => {
     const override = folderIcons[path];
     if (override) {
       return getLucideIcon(override, 24);
     }
+
+    const key = name.toLowerCase();
+    if (key.includes('thermo')) return getLucideIcon('local_fire', 24);
+    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 24);
+    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 24);
+    if (key.includes('chemistry') || key.includes('chem')) return getLucideIcon('science', 24);
+    if (key.includes('economics') || key.includes('econ') || key.includes('manage')) return getLucideIcon('bar_chart', 24);
+    if (key.includes('code') || key.includes('programming') || key.includes('pps') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 24);
+    if (key.includes('iot') || key.includes('sensor') || key.includes('embedded')) return getLucideIcon('sensors', 24);
+    if (key.includes('physics') || key.includes('mechanics') || key.includes('dynamics')) return getLucideIcon('speed', 24);
+    if (key.includes('civil') || key.includes('structure') || key.includes('concrete')) return getLucideIcon('architecture', 24);
+    if (key.includes('lab')) return getLucideIcon('biotech', 24);
+    if (key.includes('design') || key.includes('drawing') || key.includes('cad')) return getLucideIcon('draw', 24);
+    if (key.includes('network') || key.includes('computer network')) return getLucideIcon('lan', 24);
+    if (key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 24);
+    if (key.includes('operating') || key.includes('os')) return getLucideIcon('developer_board', 24);
+    if (key.includes('machine') || key.includes('manufacturing') || key.includes('workshop')) return getLucideIcon('precision_mfg', 24);
+    if (key.includes('english') || key.includes('communication') || key.includes('language')) return getLucideIcon('language', 24);
+    if (key.includes('exam') || key.includes('prep') || key.includes('question') || key.includes('bank')) return getLucideIcon('quiz', 24);
+    if (key.includes('archive')) return getLucideIcon('archive', 24);
+    if (key.includes('doc')) return getLucideIcon('school', 24);
+    if (key.includes('sem')) return getLucideIcon('bookmark', 24);
+    if (key.includes('unit')) return getLucideIcon('topic', 24);
+
     return <Folder size={24} />;
   };
 
@@ -208,7 +232,7 @@ export default function CommunityNotesScreen() {
                   className="bg-surface/30 hover:bg-surface border border-border/40 hover:border-primary/40 rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'dir' ? 'bg-primary/10 text-primary' : 'bg-teal/10 text-teal'}`}>
-                    {item.type === 'dir' ? getIconForFolder(item.path) : <FileText size={24} />}
+                    {item.type === 'dir' ? getIconForFolder(item.path, item.name) : <FileText size={24} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-text font-semibold truncate text-[15px]">{formatDisplayName(item.name)}</h3>
