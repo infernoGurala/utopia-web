@@ -175,14 +175,28 @@ export default function CommunityNotesScreen() {
       <div className="mb-10 flex items-end justify-between">
         <div>
           <h1 className="text-4xl font-bold text-text mb-2">Community Notes</h1>
-          <div className="flex items-center gap-2 text-sub text-lg">
-            <button onClick={() => { setPathHistory(['']); setCurrentPath(''); }} className="hover:text-primary transition-colors">Root</button>
-            {pathHistory.slice(1).map((path, idx) => (
-              <span key={idx} className="flex items-center gap-2">
-                <ChevronRight size={16} />
-                <span className="truncate max-w-[150px]">{formatDisplayName(path.split('/').pop())}</span>
-              </span>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 text-sub text-[17px]">
+            {pathHistory.map((path, idx) => {
+              const displayName = idx === 0 
+                ? formatDisplayName(userProfile?.selectedUniversityId || 'University')
+                : formatDisplayName(path.split('/').pop());
+
+              return (
+                <span key={idx} className="flex items-center gap-2">
+                  {idx > 0 && <ChevronRight size={16} />}
+                  <button 
+                    onClick={() => {
+                      const newHistory = pathHistory.slice(0, idx + 1);
+                      setPathHistory(newHistory);
+                      setCurrentPath(path);
+                    }} 
+                    className="hover:text-primary transition-colors truncate max-w-[150px] font-medium"
+                  >
+                    {displayName}
+                  </button>
+                </span>
+              );
+            })}
           </div>
         </div>
         
@@ -234,11 +248,8 @@ export default function CommunityNotesScreen() {
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.type === 'dir' ? 'bg-primary/10 text-primary' : 'bg-teal/10 text-teal'}`}>
                     {item.type === 'dir' ? getIconForFolder(item.path, item.name) : <FileText size={24} />}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 flex items-center h-full">
                     <h3 className="text-text font-semibold truncate text-[15px]">{formatDisplayName(item.name)}</h3>
-                    <p className="text-dim text-xs mt-1 truncate">
-                      {item.type === 'dir' ? 'Directory' : 'Markdown Note'}
-                    </p>
                   </div>
                   
                   {/* Actions */}
