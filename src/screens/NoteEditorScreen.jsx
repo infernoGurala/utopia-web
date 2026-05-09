@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
-import { ArrowLeft, Edit3, Save } from 'lucide-react';
+import { ArrowLeft, Edit3, Save, FileText, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -18,6 +18,7 @@ export default function NoteEditorScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (path) {
@@ -61,6 +62,15 @@ export default function NoteEditorScreen() {
     );
   }
 
+  const pdfLinks = [];
+  const linkRegex = /\[([^\]]+)\]\(([^)]+\.pdf(?:[^)]*)?)\)/gi;
+  let match;
+  while ((match = linkRegex.exec(content)) !== null) {
+    if (!pdfLinks.some(p => p.url === match[2])) {
+      pdfLinks.push({ text: match[1], url: match[2] });
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8 flex items-center justify-between">
@@ -69,7 +79,7 @@ export default function NoteEditorScreen() {
             <ArrowLeft size={22} />
           </button>
           <h1 className="text-2xl font-bold text-text truncate max-w-lg">
-            {path ? path.split('/').pop() : 'Note'}
+            {path ? path.split('/').pop().replace(/\.md$/i, '') : 'Note'}
           </h1>
         </div>
         
@@ -99,14 +109,66 @@ export default function NoteEditorScreen() {
             placeholder="Type your markdown here..."
           />
         ) : (
-          <div className="prose prose-invert prose-primary max-w-none">
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-            >
-              {content || '*Empty note*'}
-            </ReactMarkdown>
-          </div>
+          <>
+            {pdfLinks.length > 0 && (
+              <div className="mb-8 space-y-3">
+                {pdfLinks.map((pdf, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="p-2.5 bg-primary/20 text-primary rounded-xl shrink-0">
+                        <FileText size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-text text-sm truncate">{pdf.text}</h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <button 
+                        onClick={() => setPdfPreviewUrl(pdfPreviewUrl === pdf.url ? null : pdf.url)}
+                        className={`p-2 rounded-xl transition-colors flex items-center justify-center ${pdfPreviewUrl === pdf.url ? 'bg-primary/20 text-primary' : 'bg-surface hover:bg-border/50 text-text'}`}
+                        title="View in same window"
+                      >
+                        {pdfPreviewUrl === pdf.url ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                      <a 
+                        href={pdf.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-2 bg-primary text-bg rounded-xl transition-colors hover:scale-105 flex items-center justify-center"
+                        title="Open in new window full screen"
+                      >
+                        <ExternalLink size={18} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {pdfPreviewUrl && (
+              <div className="mb-8 rounded-2xl overflow-hidden border border-border/50 h-[70vh] bg-surface relative">
+                <div className="absolute top-0 left-0 right-0 bg-surface/80 backdrop-blur-md border-b border-border p-2 flex justify-end z-10">
+                  <button onClick={() => setPdfPreviewUrl(null)} className="px-3 py-1.5 bg-red/10 text-red hover:bg-red/20 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors">
+                    Close Preview
+                  </button>
+                </div>
+                <iframe 
+                  src={pdfPreviewUrl} 
+                  className="w-full h-full pt-10 border-none"
+                  title="PDF Preview"
+                />
+              </div>
+            )}
+
+            <div className="prose prose-primary max-w-none">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {content || '*Empty note*'}
+              </ReactMarkdown>
+            </div>
+          </>
         )}
       </div>
     </div>

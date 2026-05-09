@@ -9,6 +9,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import ClassesScreen from './screens/ClassesScreen';
 import SciwordleScreen from './screens/SciwordleScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
+import ClassNotesScreen from './screens/ClassNotesScreen';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -49,6 +50,7 @@ function App() {
               <Route index element={<Navigate to="community" replace />} />
               <Route path="community" element={<CommunityNotesScreen />} />
               <Route path="classes" element={<ClassesScreen />} />
+              <Route path="class-notes" element={<ClassNotesScreen />} />
               <Route path="attendance" element={<AttendanceScreen />} />
               <Route path="sciwordle" element={<SciwordleScreen />} />
               <Route path="profile" element={<ProfileScreen />} />

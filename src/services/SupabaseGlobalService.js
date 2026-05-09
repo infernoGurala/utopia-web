@@ -158,4 +158,30 @@ export class SupabaseGlobalService {
     const { error } = await supabase.from(table).update({ sort_index: newSortIndex }).eq('path', path);
     if (error) throw error;
   }
+
+  // ─── Trash (soft-delete) support ───
+
+  static async hideNote(path) {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('notes').update({ is_hidden: true }).eq('path', path);
+    if (error) throw error;
+  }
+
+  static async unhideNote(path) {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('notes').update({ is_hidden: false }).eq('path', path);
+    if (error) throw error;
+  }
+
+  static async hideFolder(path) {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('folders').update({ is_hidden: true }).eq('path', path);
+    if (error) throw error;
+  }
+
+  static async unhideFolder(path) {
+    const supabase = getSupabase();
+    const { error } = await supabase.from('folders').update({ is_hidden: false }).eq('path', path);
+    if (error) throw error;
+  }
 }

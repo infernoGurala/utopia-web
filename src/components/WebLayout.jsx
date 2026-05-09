@@ -1,35 +1,47 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Users, BookOpen, ClipboardCheck, Zap, User, LogOut } from 'lucide-react';
+import { Users, BookOpen, ClipboardCheck, Zap, User, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function WebLayout() {
   const { signOut } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   return (
     <div className="min-h-screen bg-bg flex flex-col md:flex-row">
       {/* Sidebar Navigation (Desktop) */}
-      <aside className="hidden md:flex w-72 bg-surface/30 border-r border-border/40 flex-col p-6 sticky top-0 h-screen overflow-y-auto z-20">
-        <div className="mb-12">
-          <h1 className="font-playfair italic text-4xl font-bold text-primary" style={{ textShadow: '0 2px 10px rgba(203,166,247,0.2)' }}>
-            Utopia
-          </h1>
+      <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-72'} bg-surface/30 border-r border-border/40 flex-col sticky top-0 h-screen overflow-y-auto z-20 transition-all duration-300 ease-in-out`}>
+        <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center p-4' : 'justify-between p-6'} mb-6`}>
+          {!isSidebarCollapsed && (
+            <h1 className="font-playfair italic text-4xl font-bold text-primary" style={{ textShadow: '0 2px 10px rgba(203,166,247,0.2)' }}>
+              Utopia
+            </h1>
+          )}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-2 text-dim hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          </button>
         </div>
 
-        <nav className="flex-1 space-y-2">
-          <NavItem to="/app/community" icon={<Users size={20} />} label="Community Notes" />
-          <NavItem to="/app/classes" icon={<BookOpen size={20} />} label="Classes" />
-          <NavItem to="/app/attendance" icon={<ClipboardCheck size={20} />} label="Attendance" />
-          <NavItem to="/app/sciwordle" icon={<Zap size={20} />} label="Sciwordle" />
+        <nav className={`flex-1 space-y-2 ${isSidebarCollapsed ? 'px-2' : 'px-4'}`}>
+          <NavItem to="/app/community" icon={<Users size={20} />} label="Community Notes" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/classes" icon={<BookOpen size={20} />} label="Classes" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/attendance" icon={<ClipboardCheck size={20} />} label="Attendance" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/sciwordle" icon={<Zap size={20} />} label="Sciwordle" collapsed={isSidebarCollapsed} />
         </nav>
 
-        <div className="pt-8 border-t border-border/40 mt-auto space-y-2">
-          <NavItem to="/app/profile" icon={<User size={20} />} label="Profile" />
+        <div className={`pt-8 border-t border-border/40 mt-auto space-y-2 ${isSidebarCollapsed ? 'px-2 pb-4' : 'px-4 pb-6'}`}>
+          <NavItem to="/app/profile" icon={<User size={20} />} label="Profile" collapsed={isSidebarCollapsed} />
           <button 
             onClick={signOut}
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-dim hover:text-red hover:bg-red/10 transition-colors"
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : ''} gap-4 px-4 py-3 rounded-xl text-dim hover:text-red hover:bg-red/10 transition-colors`}
+            title={isSidebarCollapsed ? 'Sign Out' : undefined}
           >
             <LogOut size={20} />
-            <span className="font-medium text-[15px]">Sign Out</span>
+            {!isSidebarCollapsed && <span className="font-medium text-[15px]">Sign Out</span>}
           </button>
         </div>
       </aside>
@@ -63,23 +75,24 @@ export default function WebLayout() {
   );
 }
 
-function NavItem({ to, icon, label }) {
+function NavItem({ to, icon, label, collapsed }) {
   const location = useLocation();
   const isActive = location.pathname.startsWith(to);
 
   return (
     <NavLink 
       to={to} 
-      className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 ${
+      className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 ${
         isActive 
-          ? 'bg-primary/10 text-primary font-semibold shadow-[inset_4px_0_0_var(--primary)]' 
+          ? `bg-primary/10 text-primary font-semibold ${collapsed ? '' : 'shadow-[inset_4px_0_0_var(--primary)]'}` 
           : 'text-sub hover:text-text hover:bg-surface/50 font-medium'
       }`}
+      title={collapsed ? label : undefined}
     >
       <div className={isActive ? 'text-primary' : 'text-dim'}>
         {icon}
       </div>
-      <span className="text-[15px]">{label}</span>
+      {!collapsed && <span className="text-[15px]">{label}</span>}
     </NavLink>
   );
 }

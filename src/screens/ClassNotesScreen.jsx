@@ -1,64 +1,92 @@
 import { useState, useEffect } from 'react';
 import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
-import { TrashService } from '../services/TrashService';
-import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, Users, Settings } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getLucideIcon } from '../utils/IconMap';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import TrashScreen from './TrashScreen';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
-export default function CommunityNotesScreen() {
+export default function ClassNotesScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { userProfile } = useTheme();
   const { user } = useAuth();
-  
+
+  const classId = searchParams.get('classId') || '';
+  const className = decodeURIComponent(searchParams.get('className') || 'Class');
+
+  const universityFolder = userProfile?.selectedUniversityId || '';
+
+  // The root path for class notes: {university}/{classId}/Notes/
+  const rootPath = universityFolder ? `${universityFolder}/${classId}/Notes` : '';
+
   const [items, setItems] = useState([]);
   const [folderIcons, setFolderIcons] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [showTrash, setShowTrash] = useState(false);
-  
-  const defaultUni = userProfile?.selectedUniversityId ? `${userProfile.selectedUniversityId}/Community` : '';
-  const [currentPath, setCurrentPath] = useState(defaultUni);
-  const [pathHistory, setPathHistory] = useState([defaultUni]);
+  const [ownerName, setOwnerName] = useState('');
+  const [classData, setClassData] = useState(null);
 
-  // Derive universityId from the path for trash operations
-  const universityId = userProfile?.selectedUniversityId || currentPath?.split('/')[0] || '';
+  const [currentPath, setCurrentPath] = useState(rootPath);
+  const [pathHistory, setPathHistory] = useState([rootPath]);
 
+  // Update root path when university profile loads
   useEffect(() => {
-    if (userProfile) {
-      const newUni = userProfile.selectedUniversityId ? `${userProfile.selectedUniversityId}/Community` : '';
-      if (newUni !== pathHistory[0]) {
-        setCurrentPath(newUni);
-        setPathHistory([newUni]);
-      }
+    if (universityFolder && classId) {
+      const newRoot = `${universityFolder}/${classId}/Notes`;
+      setCurrentPath(newRoot);
+      setPathHistory([newRoot]);
     }
-  }, [userProfile]);
+  }, [universityFolder, classId]);
 
+  // Load class metadata
   useEffect(() => {
-    loadDirectory(currentPath);
+    if (classId) {
+      loadClassData();
+    }
+  }, [classId]);
+
+  // Load directory when path changes
+  useEffect(() => {
+    if (currentPath) {
+      loadDirectory(currentPath);
+    }
   }, [currentPath]);
 
+  const loadClassData = async () => {
+    try {
+      const classDoc = await getDoc(doc(db, 'classes', classId));
+      if (classDoc.exists()) {
+        const data = classDoc.data();
+        setClassData(data);
+        // Fetch owner name
+        if (data.creatorUid) {
+          const ownerDoc = await getDoc(doc(db, 'users', data.creatorUid));
+          if (ownerDoc.exists()) {
+            setOwnerName(ownerDoc.data()?.displayName || 'Unknown');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load class data:', err);
+    }
+  };
+
   const loadDirectory = async (path) => {
+    if (!path) return;
     setLoading(true);
     setError('');
     try {
-      if (!path || path === '') {
-        const unis = await SupabaseGlobalService.getUniversities();
-        setItems(unis.map(u => ({ ...u, type: 'dir', name: u.path.split('/')[0] })));
-        setFolderIcons({});
-      } else {
-        const contents = await SupabaseGlobalService.getDirectoryContents(path);
-        setItems(contents);
-        
-        const icons = await SupabaseGlobalService.getFolderIcons(path);
-        setFolderIcons(icons);
-      }
+      const contents = await SupabaseGlobalService.getDirectoryContents(path);
+      setItems(contents);
+      const icons = await SupabaseGlobalService.getFolderIcons(path);
+      setFolderIcons(icons);
     } catch (err) {
       console.error(err);
-      setError('Failed to load community notes.');
+      setError('Failed to load class notes.');
     } finally {
       setLoading(false);
     }
@@ -66,9 +94,8 @@ export default function CommunityNotesScreen() {
 
   const navigateTo = (item) => {
     if (item.type === 'dir') {
-      const newPath = !currentPath || currentPath === '' ? `${item.name}/Community` : item.path;
-      setPathHistory([...pathHistory, newPath]);
-      setCurrentPath(newPath);
+      setPathHistory([...pathHistory, item.path]);
+      setCurrentPath(item.path);
     } else {
       navigate(`/app/note?path=${encodeURIComponent(item.path)}`);
     }
@@ -80,6 +107,8 @@ export default function CommunityNotesScreen() {
       newHistory.pop();
       setPathHistory(newHistory);
       setCurrentPath(newHistory[newHistory.length - 1]);
+    } else {
+      navigate('/app/classes');
     }
   };
 
@@ -88,7 +117,10 @@ export default function CommunityNotesScreen() {
     const name = prompt("Enter folder name:");
     if (!name) return;
     try {
-      await SupabaseGlobalService.createFolder(`${currentPath}/${name}`, name, currentPath, user.uid);
+      await SupabaseGlobalService.createFolder(
+        `${currentPath}/${name}`, name, currentPath, user.uid,
+        universityFolder, classId
+      );
       loadDirectory(currentPath);
     } catch (err) {
       setError("Failed to create folder");
@@ -100,7 +132,10 @@ export default function CommunityNotesScreen() {
     const name = prompt("Enter note name:");
     if (!name) return;
     try {
-      await SupabaseGlobalService.createNote(`${currentPath}/${name}.md`, `${name}.md`, currentPath, user.uid);
+      await SupabaseGlobalService.createNote(
+        `${currentPath}/${name}.md`, `${name}.md`, currentPath, user.uid,
+        universityFolder, classId
+      );
       loadDirectory(currentPath);
     } catch (err) {
       setError("Failed to create note");
@@ -113,10 +148,8 @@ export default function CommunityNotesScreen() {
     if (!newName || newName === item.name) return;
     try {
       if (item.type === 'file') {
-        const newPath = `${item.folder_path}/${newName}`;
+        const newPath = `${currentPath}/${newName}`;
         await SupabaseGlobalService.renameNote(item.path, newName, newPath);
-      } else {
-        setError("Folder renaming is complex and disabled in MVP");
       }
       loadDirectory(currentPath);
     } catch (err) {
@@ -126,37 +159,17 @@ export default function CommunityNotesScreen() {
 
   const handleDelete = async (e, item) => {
     e.stopPropagation();
-    
-    if (universityId) {
-      // Use trash system (soft delete)
-      const confirmTrash = window.confirm(`Move "${formatDisplayName(item.name)}" to trash?`);
-      if (!confirmTrash) return;
-      try {
-        const trashService = new TrashService(universityId);
-        await trashService.moveToTrash({
-          path: item.path,
-          name: item.name,
-          type: item.type === 'dir' ? 'dir' : 'file',
-        });
-        loadDirectory(currentPath);
-      } catch (err) {
-        console.error('Failed to move to trash:', err);
-        setError("Failed to move to trash");
+    const confirmDelete = window.confirm(`Delete "${formatDisplayName(item.name)}"?`);
+    if (!confirmDelete) return;
+    try {
+      if (item.type === 'file') {
+        await SupabaseGlobalService.deleteNote(item.path);
+      } else {
+        await SupabaseGlobalService.deleteFolder(item.path);
       }
-    } else {
-      // Fallback: permanent delete
-      const confirmDelete = window.confirm(`Are you sure you want to permanently delete ${item.name}?`);
-      if (!confirmDelete) return;
-      try {
-        if (item.type === 'file') {
-          await SupabaseGlobalService.deleteNote(item.path);
-        } else {
-          await SupabaseGlobalService.deleteFolder(item.path);
-        }
-        loadDirectory(currentPath);
-      } catch (err) {
-        setError("Failed to delete");
-      }
+      loadDirectory(currentPath);
+    } catch (err) {
+      setError("Failed to delete");
     }
   };
 
@@ -173,32 +186,16 @@ export default function CommunityNotesScreen() {
 
   const getIconForItem = (path, name, type) => {
     const override = folderIcons[path];
-    if (override) {
-      return getLucideIcon(override, 24);
-    }
+    if (override) return getLucideIcon(override, 24);
 
     const key = name.toLowerCase();
-    if (key.includes('thermo')) return getLucideIcon('local_fire', 24);
-    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 24);
-    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 24);
-    if (key.includes('chemistry') || key.includes('chem')) return getLucideIcon('science', 24);
-    if (key.includes('economics') || key.includes('econ') || key.includes('manage')) return getLucideIcon('bar_chart', 24);
-    if (key.includes('code') || key.includes('programming') || key.includes('pps') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 24);
-    if (key.includes('iot') || key.includes('sensor') || key.includes('embedded')) return getLucideIcon('sensors', 24);
-    if (key.includes('physics') || key.includes('mechanics') || key.includes('dynamics')) return getLucideIcon('speed', 24);
-    if (key.includes('civil') || key.includes('structure') || key.includes('concrete')) return getLucideIcon('architecture', 24);
-    if (key.includes('lab')) return getLucideIcon('biotech', 24);
-    if (key.includes('design') || key.includes('drawing') || key.includes('cad')) return getLucideIcon('draw', 24);
-    if (key.includes('network') || key.includes('computer network')) return getLucideIcon('lan', 24);
-    if (key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 24);
-    if (key.includes('operating') || key.includes('os')) return getLucideIcon('developer_board', 24);
-    if (key.includes('machine') || key.includes('manufacturing') || key.includes('workshop')) return getLucideIcon('precision_mfg', 24);
-    if (key.includes('english') || key.includes('communication') || key.includes('language')) return getLucideIcon('language', 24);
-    if (key.includes('exam') || key.includes('prep') || key.includes('question') || key.includes('bank')) return getLucideIcon('quiz', 24);
-    if (key.includes('archive')) return getLucideIcon('archive', 24);
-    if (key.includes('doc')) return getLucideIcon('school', 24);
-    if (key.includes('sem')) return getLucideIcon('bookmark', 24);
+    if (key.includes('doc') || key.includes('note')) return getLucideIcon('article', 24);
+    if (key.includes('assign')) return getLucideIcon('assignment', 24);
+    if (key.includes('quiz') || key.includes('test')) return getLucideIcon('quiz', 24);
     if (key.includes('unit')) return getLucideIcon('topic', 24);
+    if (key.includes('sem')) return getLucideIcon('bookmark', 24);
+    if (key.includes('lab')) return getLucideIcon('biotech', 24);
+    if (key.includes('exam') || key.includes('prep')) return getLucideIcon('quiz', 24);
 
     return type === 'file' ? <FileText size={24} /> : <Folder size={24} />;
   };
@@ -208,36 +205,67 @@ export default function CommunityNotesScreen() {
     return name.replace(/__[0-9a-f]{4}$/i, '').replace(/\.md$/i, '');
   };
 
+  // Build breadcrumb from pathHistory relative to root
+  const getBreadcrumbs = () => {
+    return pathHistory.map((path, idx) => {
+      if (idx === 0) return className;
+      const segment = path.split('/').pop();
+      return formatDisplayName(segment);
+    });
+  };
+
   return (
     <div className="max-w-5xl">
+      {/* Class Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-text mb-2">Community Notes</h1>
-          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-sub text-[15px] md:text-[17px]">
-            {pathHistory.map((path, idx) => {
-              const displayName = idx === 0 
-                ? formatDisplayName(userProfile?.selectedUniversityId || 'University')
-                : formatDisplayName(path.split('/').pop());
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={() => navigate('/app/classes')} className="p-2 text-dim hover:text-text hover:bg-surface/50 rounded-xl transition-colors">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-text">{className}</h1>
+              {ownerName && (
+                <p className="text-sub text-sm mt-0.5">Owned by {ownerName}</p>
+              )}
+            </div>
+          </div>
 
-              return (
-                <span key={idx} className="flex items-center gap-1.5 md:gap-2">
-                  {idx > 0 && <ChevronRight size={16} className="text-dim" />}
-                  <button 
-                    onClick={() => {
-                      const newHistory = pathHistory.slice(0, idx + 1);
-                      setPathHistory(newHistory);
-                      setCurrentPath(path);
-                    }} 
-                    className="hover:text-primary transition-colors truncate max-w-[120px] md:max-w-[150px] font-medium"
-                  >
-                    {displayName}
-                  </button>
-                </span>
-              );
-            })}
+          {/* Class Info Bar */}
+          <div className="flex items-center gap-4 text-sm text-dim ml-12">
+            {classData?.memberCount && (
+              <span className="flex items-center gap-1.5">
+                <Users size={14} />
+                {classData.memberCount} members
+              </span>
+            )}
+            {classData?.classCode && (
+              <span className="px-2.5 py-0.5 bg-surface/50 border border-border/50 rounded-lg font-mono text-xs text-sub">
+                {classData.classCode}
+              </span>
+            )}
+          </div>
+
+          {/* Breadcrumbs */}
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-sub text-[15px] mt-3 ml-12">
+            {getBreadcrumbs().map((label, idx) => (
+              <span key={idx} className="flex items-center gap-1.5">
+                {idx > 0 && <ChevronRight size={16} className="text-dim" />}
+                <button
+                  onClick={() => {
+                    const newHistory = pathHistory.slice(0, idx + 1);
+                    setPathHistory(newHistory);
+                    setCurrentPath(newHistory[newHistory.length - 1]);
+                  }}
+                  className={`hover:text-primary transition-colors truncate max-w-[150px] font-medium ${idx === pathHistory.length - 1 ? 'text-primary' : ''}`}
+                >
+                  {label}
+                </button>
+              </span>
+            ))}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
           {pathHistory.length > 1 && (
             <button onClick={goBack} className="flex shrink-0 items-center gap-1 md:gap-2 text-text hover:bg-surface/50 px-3 md:px-4 py-2 rounded-xl transition-colors font-medium">
@@ -247,11 +275,11 @@ export default function CommunityNotesScreen() {
           )}
 
           {/* Edit Mode Toggle */}
-          <button 
+          <button
             onClick={() => setIsEditMode(!isEditMode)}
             className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
-              isEditMode 
-                ? 'bg-primary text-bg shadow-lg shadow-primary/25' 
+              isEditMode
+                ? 'bg-primary text-bg shadow-lg shadow-primary/25'
                 : 'bg-surface/50 hover:bg-surface text-text border border-border/50'
             }`}
           >
@@ -259,16 +287,8 @@ export default function CommunityNotesScreen() {
             <span className="text-sm">{isEditMode ? 'Done' : 'Edit'}</span>
           </button>
 
-          {/* Edit mode actions */}
-          {isEditMode && currentPath && (
+          {isEditMode && (
             <>
-              <button 
-                onClick={() => setShowTrash(true)} 
-                className="flex shrink-0 items-center gap-1 md:gap-2 text-dim hover:text-red hover:bg-red/10 px-3 md:px-4 py-2 rounded-xl transition-colors font-medium border border-border/50"
-              >
-                <Trash2 size={18} />
-                <span className="hidden md:inline text-sm">Trash</span>
-              </button>
               <button onClick={handleCreateFolder} className="flex shrink-0 items-center gap-1 md:gap-2 bg-surface/50 hover:bg-surface text-text px-3 md:px-4 py-2 rounded-xl font-medium transition-colors border border-border/50">
                 <Plus size={18} /> <span className="hidden md:inline text-sm">Folder</span>
               </button>
@@ -280,6 +300,7 @@ export default function CommunityNotesScreen() {
         </div>
       </div>
 
+      {/* Content */}
       <div>
         {error && (
           <div className="mb-6 p-4 bg-red/10 text-red rounded-2xl border border-red/20 flex items-start gap-3">
@@ -296,14 +317,14 @@ export default function CommunityNotesScreen() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.length === 0 ? (
               <div className="col-span-full py-20 text-center text-dim bg-surface/20 border border-border/30 rounded-3xl border-dashed">
-                This folder is empty.
+                {isEditMode ? 'No notes yet. Create one to get started!' : 'This class has no notes yet.'}
               </div>
             ) : (
               items.map((item, idx) => {
                 const style = colorPalette[idx % colorPalette.length];
 
                 return (
-                  <div 
+                  <div
                     key={item.path || idx}
                     onClick={() => navigateTo(item)}
                     className={`bg-surface/30 hover:bg-surface border border-border/40 ${style.border} rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group`}
@@ -314,8 +335,7 @@ export default function CommunityNotesScreen() {
                     <div className="flex-1 min-w-0 flex items-center h-full">
                       <h3 className="text-text font-semibold truncate text-[15px]">{formatDisplayName(item.name)}</h3>
                     </div>
-                    
-                    {/* Actions — only visible in edit mode */}
+
                     {isEditMode && (
                       <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {item.type === 'file' && (
@@ -335,15 +355,6 @@ export default function CommunityNotesScreen() {
           </div>
         )}
       </div>
-
-      {/* Trash Modal */}
-      {showTrash && universityId && (
-        <TrashScreen 
-          universityId={universityId} 
-          onClose={() => setShowTrash(false)}
-          onRestored={() => loadDirectory(currentPath)}
-        />
-      )}
     </div>
   );
 }

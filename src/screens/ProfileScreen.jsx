@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Settings, Shield, Bell, Palette, CheckCircle2 } from 'lucide-react';
+import { User, Settings, Shield, Bell, Palette, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../theme/themes';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -10,6 +10,7 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const { currentThemeId } = useTheme();
   const [updatingTheme, setUpdatingTheme] = useState(false);
+  const [isThemeExpanded, setIsThemeExpanded] = useState(false);
 
   const handleThemeChange = async (themeKey) => {
     if (!user || updatingTheme) return;
@@ -45,67 +46,77 @@ export default function ProfileScreen() {
         </div>
       </div>
 
-      {/* Theme Selector */}
-      <div className="mb-12">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Palette size={20} />
+      {/* Theme Selector - Collapsed by default */}
+      <div className="mb-12 bg-surface/20 border border-border/30 rounded-2xl overflow-hidden">
+        <button 
+          className="w-full flex items-center justify-between p-5 group hover:bg-surface/30 transition-colors"
+          onClick={() => setIsThemeExpanded(!isThemeExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+              <Palette size={20} />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-text group-hover:text-primary transition-colors">Appearance</h2>
+              <p className="text-sub text-sm">
+                {isThemeExpanded ? 'Choose your theme' : `Current: ${currentThemeId?.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Default'}`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-text">Appearance</h2>
-            <p className="text-sub">Customize the look and feel of your workspace.</p>
+          <div className={`w-8 h-8 flex items-center justify-center text-dim group-hover:text-primary transition-all duration-300 ${isThemeExpanded ? 'rotate-180' : ''}`}>
+            <ChevronDown size={22} />
           </div>
-        </div>
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.keys(themes).map((themeKey) => {
-            const themeObj = themes[themeKey];
-            const isSelected = currentThemeId === themeKey;
-            
-            // Extract a readable label from the key
-            const label = themeKey.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isThemeExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 pt-0">
+            {Object.keys(themes).map((themeKey) => {
+              const themeObj = themes[themeKey];
+              const isSelected = currentThemeId === themeKey;
+              const label = themeKey.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
-            return (
-              <button
-                key={themeKey}
-                onClick={() => handleThemeChange(themeKey)}
-                disabled={updatingTheme}
-                className={`relative overflow-hidden group rounded-2xl border text-left transition-all duration-300 ${isSelected ? 'border-primary shadow-lg shadow-primary/10 scale-[1.02]' : 'border-border/40 hover:border-border hover:bg-surface/30'}`}
-                style={{ backgroundColor: isSelected ? themeObj.surface : themeObj.bg }}
-              >
-                {/* Theme Preview Card */}
-                <div className="p-4 border-b border-border/20" style={{ backgroundColor: themeObj.bg }}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.red }}></div>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.gold }}></div>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.green }}></div>
+              return (
+                <button
+                  key={themeKey}
+                  onClick={() => handleThemeChange(themeKey)}
+                  disabled={updatingTheme}
+                  className={`relative overflow-hidden rounded-2xl border text-left transition-all duration-300 ${isSelected ? 'border-primary shadow-lg shadow-primary/10 scale-[1.02]' : 'border-border/40 hover:border-border hover:bg-surface/30'}`}
+                  style={{ backgroundColor: isSelected ? themeObj.surface : themeObj.bg }}
+                >
+                  {/* Theme Preview Card */}
+                  <div className="p-4 border-b border-border/20" style={{ backgroundColor: themeObj.bg }}>
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.red }}></div>
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.gold }}></div>
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: themeObj.green }}></div>
+                      </div>
+                      {isSelected && <CheckCircle2 size={20} style={{ color: themeObj.primary }} />}
                     </div>
-                    {isSelected && <CheckCircle2 size={20} style={{ color: themeObj.primary }} />}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="w-3/4 h-3 rounded-full" style={{ backgroundColor: themeObj.text }}></div>
-                    <div className="w-1/2 h-2.5 rounded-full" style={{ backgroundColor: themeObj.sub }}></div>
-                    <div className="mt-4 flex gap-2">
-                      <div className="w-full h-8 rounded-lg opacity-80" style={{ backgroundColor: themeObj.primary }}></div>
-                      <div className="w-10 h-8 rounded-lg opacity-80" style={{ backgroundColor: themeObj.surface }}></div>
+                    
+                    <div className="space-y-3">
+                      <div className="w-3/4 h-3 rounded-full" style={{ backgroundColor: themeObj.text }}></div>
+                      <div className="w-1/2 h-2.5 rounded-full" style={{ backgroundColor: themeObj.sub }}></div>
+                      <div className="mt-4 flex gap-2">
+                        <div className="w-full h-8 rounded-lg opacity-80" style={{ backgroundColor: themeObj.primary }}></div>
+                        <div className="w-10 h-8 rounded-lg opacity-80" style={{ backgroundColor: themeObj.surface }}></div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Theme Label */}
-                <div className="p-4" style={{ backgroundColor: themeObj.card }}>
-                  <h3 className="font-bold text-[15px] flex items-center justify-between" style={{ color: themeObj.text }}>
-                    {label}
-                  </h3>
-                  <p className="text-xs mt-1" style={{ color: themeObj.sub }}>
-                    {themeObj.isDark ? 'Dark Mode' : 'Light Mode'}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+                  {/* Theme Label */}
+                  <div className="p-4" style={{ backgroundColor: themeObj.card }}>
+                    <h3 className="font-bold text-[15px] flex items-center justify-between" style={{ color: themeObj.text }}>
+                      {label}
+                    </h3>
+                    <p className="text-xs mt-1" style={{ color: themeObj.sub }}>
+                      {themeObj.isDark ? 'Dark Mode' : 'Light Mode'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

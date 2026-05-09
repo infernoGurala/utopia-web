@@ -69,6 +69,27 @@
   }
 }
 
+@layer components {
+  .prose {
+    --tw-prose-body: var(--text);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--sub);
+    --tw-prose-links: var(--primary);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--sub);
+    --tw-prose-bullets: var(--border);
+    --tw-prose-hr: var(--border);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--primary);
+    --tw-prose-captions: var(--sub);
+    --tw-prose-code: var(--teal);
+    --tw-prose-pre-code: var(--text);
+    --tw-prose-pre-bg: var(--surface);
+    --tw-prose-th-borders: var(--border);
+    --tw-prose-td-borders: var(--border);
+  }
+}
+
 @layer utilities {
   .glass-nav {
     background: color-mix(in srgb, var(--surface) 60%, transparent);
@@ -82,3 +103,97 @@
 .font-playfair {
   font-family: 'Playfair Display', serif;
 }
+
+/* ─── Global Animations ─── */
+
+/* Page entrance */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Card entrance — stagger via inline --delay */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Fade-in scale for modals / overlays */
+@keyframes fadeScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Slide in from right (for detail pages) */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Subtle float for icons */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Spinner pulse */
+@keyframes spinGlow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 30%, transparent); }
+  70% { box-shadow: 0 0 0 12px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Utility classes */
+.animate-page-in {
+  animation: pageIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-scale {
+  animation: fadeScale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-card-in {
+  animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* Stagger helper: apply to grid/list containers */
+.stagger-children > * {
+  animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9)  { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 550ms; }
+.stagger-children > *:nth-child(n+13) { animation-delay: 600ms; }
+
+/* Spinner glow */
+.animate-spin-glow {
+  animation: spinGlow 1.5s ease-in-out infinite;
+}
+
+/* Smooth hover microinteractions */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* Hide scrollbar utility */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
