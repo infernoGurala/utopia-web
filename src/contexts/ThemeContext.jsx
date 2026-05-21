@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { themes, defaultTheme } from '../theme/themes';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 const ThemeContext = createContext();
@@ -52,8 +52,26 @@ export default function ThemeProvider({ children }) {
     }
   }, [currentThemeId]);
 
+  // changeTheme: update locally immediately, then sync to Firestore
+  const changeTheme = async (themeKey) => {
+    if (!themes[themeKey]) return;
+    setCurrentThemeId(themeKey); // instant local update
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        await updateDoc(userRef, { themeAccent: themeKey });
+      } else {
+        await setDoc(userRef, { themeAccent: themeKey }, { merge: true });
+      }
+    } catch (error) {
+      console.warn('Could not persist theme to Firestore (offline / rules). Theme applied locally.', error);
+    }
+  };
+
   return (
-    <ThemeContext.Provider value={{ currentThemeId, userProfile }}>
+    <ThemeContext.Provider value={{ currentThemeId, userProfile, changeTheme }}>
       {children}
     </ThemeContext.Provider>
   );

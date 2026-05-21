@@ -3,6 +3,17 @@ import AuthProvider, { useAuth } from './contexts/AuthContext';
 import ThemeProvider from './contexts/ThemeContext';
 import LoginScreen from './screens/LoginScreen';
 import WebLayout from './components/WebLayout';
+import FocusScreen from './screens/FocusScreen';
+import DailyNoteScreen from './screens/DailyNoteScreen';
+import RemindersScreen from './screens/RemindersScreen';
+import HeatmapHomeScreen from './screens/HeatmapHomeScreen';
+import TaskHeatmapScreen from './screens/TaskHeatmapScreen';
+import LibraryScreen from './screens/LibraryScreen';
+import UniversityScreen from './screens/UniversityScreen';
+import TimetableScreen from './screens/TimetableScreen';
+import UniChatScreen from './screens/UniChatScreen';
+import DocsScreen from './screens/DocsScreen';
+import FriendsScreen from './screens/FriendsScreen';
 import AttendanceScreen from './screens/AttendanceScreen';
 import NotesScreen from './screens/NotesScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -47,8 +58,27 @@ function App() {
                 </ProtectedRoute>
               } 
             >
+<<<<<<< Updated upstream
               <Route index element={<Navigate to="notes" replace />} />
               <Route path="notes" element={<NotesScreen />} />
+=======
+              <Route index element={<Navigate to="focus" replace />} />
+              <Route path="focus" element={<FocusScreen />} />
+              <Route path="daily-note" element={<DailyNoteScreen />} />
+              <Route path="reminders" element={<RemindersScreen />} />
+              <Route path="activity" element={<HeatmapHomeScreen />} />
+              <Route path="activity/task/:taskName" element={<TaskHeatmapScreen />} />
+              
+              <Route path="library" element={<LibraryScreen />} />
+              <Route path="university" element={<UniversityScreen />} />
+              <Route path="timetable" element={<TimetableScreen />} />
+              <Route path="chat" element={<UniChatScreen />} />
+              <Route path="docs" element={<DocsScreen />} />
+              <Route path="friends" element={<FriendsScreen />} />
+              
+              <Route path="community" element={<CommunityNotesScreen />} />
+              <Route path="classes" element={<ClassesScreen />} />
+>>>>>>> Stashed changes
               <Route path="class-notes" element={<ClassNotesScreen />} />
               <Route path="attendance" element={<AttendanceScreen />} />
               <Route path="profile" element={<ProfileScreen />} />

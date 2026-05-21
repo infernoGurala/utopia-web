@@ -1,7 +1,13 @@
+<<<<<<< Updated upstream
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Users, BookOpen, ClipboardCheck, Zap, User, LogOut, Flame, Home } from 'lucide-react';
 
+=======
+import { useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Sparkles, BookOpen, GraduationCap, Zap, User, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+>>>>>>> Stashed changes
 import { useAuth } from '../contexts/AuthContext';
 
 export default function WebLayout() {
@@ -168,6 +174,7 @@ export default function WebLayout() {
             />
           )}
 
+<<<<<<< Updated upstream
           {/* Magnetic Parallax Shift Content Group */}
           <div 
             className="w-full h-full relative magnetic-spring-container"
@@ -176,6 +183,21 @@ export default function WebLayout() {
                 ? `translate(${coords.x * 0.12}px, ${coords.y * 0.12}px)` 
                 : 'translate(0px, 0px)' 
             }}
+=======
+        <nav className={`flex-1 space-y-2 ${isSidebarCollapsed ? 'px-2' : 'px-4'}`}>
+          <NavItem to="/app/focus" icon={<Sparkles size={20} />} label="Focus" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/library" icon={<BookOpen size={20} />} label="Library" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/university" icon={<GraduationCap size={20} />} label="University" collapsed={isSidebarCollapsed} />
+          <NavItem to="/app/sciwordle" icon={<Zap size={20} />} label="Sciwordle" collapsed={isSidebarCollapsed} />
+        </nav>
+
+        <div className={`pt-8 border-t border-border/40 mt-auto space-y-2 ${isSidebarCollapsed ? 'px-2 pb-4' : 'px-4 pb-6'}`}>
+          <NavItem to="/app/profile" icon={<User size={20} />} label="Profile" collapsed={isSidebarCollapsed} />
+          <button 
+            onClick={signOut}
+            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : ''} gap-4 px-4 py-3 rounded-xl text-dim hover:text-red hover:bg-red/10 transition-colors`}
+            title={isSidebarCollapsed ? 'Sign Out' : undefined}
+>>>>>>> Stashed changes
           >
             {/* Wireframe Constellation Connections (Fades in dynamically when blossomed) */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none select-none z-0 transition-opacity duration-500" style={{ opacity: isExpanded ? 1 : 0 }}>
@@ -569,12 +591,22 @@ export default function WebLayout() {
       )}
 
       {/* Bottom Navigation (Mobile) */}
+<<<<<<< Updated upstream
       <div className="md:hidden fixed bottom-4 left-4 right-4 bg-surface/60 backdrop-blur-xl border border-border/20 rounded-3xl p-1.5 flex justify-around items-center z-50 shadow-2xl">
         <MobileNavItem to="/app/notes" icon={<BookOpen size={20} />} label="Notes" />
         <MobileNavItem to="/app/attendance" icon={<ClipboardCheck size={20} />} label="Presence" />
         <MobileNavItem to="/app/focus" icon={<Flame size={20} />} label="Focus" />
         <MobileNavItem to="/app/profile" icon={<User size={20} />} label="Profile" />
       </div>
+=======
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/80 backdrop-blur-xl border-t border-border/40 flex justify-around items-center p-2 z-50 pb-safe">
+        <MobileNavItem to="/app/focus" icon={<Sparkles size={22} />} label="Focus" />
+        <MobileNavItem to="/app/library" icon={<BookOpen size={22} />} label="Library" />
+        <MobileNavItem to="/app/university" icon={<GraduationCap size={22} />} label="University" />
+        <MobileNavItem to="/app/sciwordle" icon={<Zap size={22} />} label="Sciwordle" />
+        <MobileNavItem to="/app/profile" icon={<User size={22} />} label="Profile" />
+      </nav>
+>>>>>>> Stashed changes
     </div>
   );
 }
