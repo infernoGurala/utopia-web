@@ -4,12 +4,12 @@ import ThemeProvider from './contexts/ThemeContext';
 import LoginScreen from './screens/LoginScreen';
 import WebLayout from './components/WebLayout';
 import AttendanceScreen from './screens/AttendanceScreen';
-import CommunityNotesScreen from './screens/CommunityNotesScreen';
+import NotesScreen from './screens/NotesScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import ClassesScreen from './screens/ClassesScreen';
-import SciwordleScreen from './screens/SciwordleScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
 import ClassNotesScreen from './screens/ClassNotesScreen';
+import FocusScreen from './screens/FocusScreen';
+
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -47,14 +47,14 @@ function App() {
                 </ProtectedRoute>
               } 
             >
-              <Route index element={<Navigate to="community" replace />} />
-              <Route path="community" element={<CommunityNotesScreen />} />
-              <Route path="classes" element={<ClassesScreen />} />
+              <Route index element={<Navigate to="notes" replace />} />
+              <Route path="notes" element={<NotesScreen />} />
               <Route path="class-notes" element={<ClassNotesScreen />} />
               <Route path="attendance" element={<AttendanceScreen />} />
-              <Route path="sciwordle" element={<SciwordleScreen />} />
               <Route path="profile" element={<ProfileScreen />} />
               <Route path="note" element={<NoteEditorScreen />} />
+              <Route path="focus" element={<FocusScreen />} />
+
             </Route>
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>

@@ -108,7 +108,7 @@ export default function ClassNotesScreen() {
       setPathHistory(newHistory);
       setCurrentPath(newHistory[newHistory.length - 1]);
     } else {
-      navigate('/app/classes');
+      navigate('/app/notes?tab=classes');
     }
   };
 
@@ -220,7 +220,7 @@ export default function ClassNotesScreen() {
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <button onClick={() => navigate('/app/classes')} className="p-2 text-dim hover:text-text hover:bg-surface/50 rounded-xl transition-colors">
+            <button onClick={() => navigate('/app/notes?tab=classes')} className="p-2 text-dim hover:text-text hover:bg-surface/50 rounded-xl transition-colors">
               <ArrowLeft size={20} />
             </button>
             <div>
