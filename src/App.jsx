@@ -47,7 +47,7 @@ function App() {
                 </ProtectedRoute>
               } 
             >
-              <Route index element={<Navigate to="notes" replace />} />
+              <Route index element={<Navigate to="focus" replace />} />
               <Route path="notes" element={<NotesScreen />} />
               <Route path="class-notes" element={<ClassNotesScreen />} />
               <Route path="attendance" element={<AttendanceScreen />} />

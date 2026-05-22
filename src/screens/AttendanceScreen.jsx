@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GasAttendanceService } from '../services/GasAttendanceService';
-import { RefreshCw, Calendar, LogOut, AlertCircle, Info, CheckCircle2, BookOpen } from 'lucide-react';
+import { RefreshCw, Calendar, LogOut, AlertCircle, Info, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AttendanceScreen() {
@@ -58,9 +58,9 @@ export default function AttendanceScreen() {
   };
   
   const getPercentageBgClass = (value) => {
-    if (value >= 75) return 'bg-green/20';
-    if (value >= 65) return 'bg-peach/20';
-    return 'bg-red/20';
+    if (value >= 75) return 'bg-green/10';
+    if (value >= 65) return 'bg-peach/10';
+    return 'bg-red/10';
   };
 
   const getPercentageSolidBgClass = (value) => {
@@ -97,13 +97,10 @@ export default function AttendanceScreen() {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center py-20">
-          <div className="relative w-16 h-16 mb-6">
-            <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p className="text-text font-bold text-lg mb-1">Authenticating</p>
-          <p className="text-sub text-sm">Connecting to college portal...</p>
+        <div className="flex-1 flex flex-col items-center justify-center py-20 animate-fadeIn">
+          <div className="w-10 h-10 mb-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-text font-bold text-lg mb-1">Connecting</p>
+          <p className="text-sub text-sm">Accessing college database...</p>
         </div>
       );
     }
@@ -116,68 +113,63 @@ export default function AttendanceScreen() {
       const solidBgClass = getPercentageSolidBgClass(overall);
 
       return (
-        <div className="flex-1 animate-fade-in pb-8">
-          {/* Hero Widget */}
-          <div className={`p-6 md:p-8 rounded-[30px] border border-border bg-gradient-to-br from-card to-bg mb-8 relative overflow-hidden`}>
-            {/* Soft gradient overlay matching the flutter linear gradient */}
-            <div className={`absolute inset-0 opacity-10 bg-gradient-to-br from-transparent to-current ${colorClass}`}></div>
-            
-            <div className="relative z-10">
-              <div className="flex items-start justify-between mb-5">
-                <div className={`w-14 h-14 rounded-2xl ${bgClass} flex items-center justify-center shadow-md shadow-${solidBgClass}/20`}>
-                  <svg className={`w-7 h-7 ${colorClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleFetch()} className="p-2 bg-surface/50 hover:bg-surface border border-border/50 rounded-xl transition-colors">
-                    <RefreshCw size={18} className="text-dim hover:text-text" />
-                  </button>
-                  <button onClick={disconnect} className="p-2 bg-surface/50 hover:bg-surface border border-border/50 rounded-xl transition-colors">
-                    <LogOut size={18} className="text-dim hover:text-red" />
-                  </button>
-                </div>
-              </div>
-              
-              <h3 className={`text-xs font-bold uppercase tracking-wider mb-2 ${colorClass}`}>
+        <div className="flex-1 animate-fadeIn pb-8">
+          {/* Minimalist Hero Widget */}
+          <div className="p-6 md:p-8 rounded-2xl glass-premium mb-6 shadow-sm relative overflow-hidden">
+            <div className="flex items-start justify-between mb-4">
+              <div className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest ${bgClass} ${colorClass}`}>
                 {getHeadline(overall)}
-              </h3>
-              <h1 className="text-5xl font-extrabold text-text mb-2 tracking-tight">
-                {overall.toFixed(1)}%
-              </h1>
-              <p className={`font-semibold text-sm ${belowTargetCount > 0 ? 'text-red' : 'text-sub'}`}>
-                {getHeroStatusText(belowTargetCount)}
-              </p>
-              
-              {data.studentName && (
-                <div className="mt-4 flex items-center gap-2">
-                  <UserIcon className="w-4 h-4 text-dim" />
-                  <span className="text-sm font-semibold text-text truncate uppercase tracking-wide">
-                    {data.studentName}
-                  </span>
-                </div>
-              )}
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleFetch()} 
+                  title="Refresh attendance"
+                  className="p-2 bg-surface hover:bg-border/30 border border-border/40 rounded-lg transition-all cursor-pointer"
+                >
+                  <RefreshCw size={16} className="text-sub hover:text-text" />
+                </button>
+                <button 
+                  onClick={disconnect} 
+                  title="Disconnect account"
+                  className="p-2 bg-surface hover:bg-border/30 border border-border/40 rounded-lg transition-all cursor-pointer"
+                >
+                  <LogOut size={16} className="text-sub hover:text-red" />
+                </button>
+              </div>
             </div>
+            
+            <h1 className="text-5xl md:text-6xl font-extrabold text-text mb-2 tracking-tight">
+              {overall.toFixed(1)}%
+            </h1>
+            <p className={`text-sm font-semibold ${belowTargetCount > 0 ? 'text-red' : 'text-sub'}`}>
+              {getHeroStatusText(belowTargetCount)}
+            </p>
+            
+            {data.studentName && (
+              <div className="mt-4 pt-4 border-t border-border/20 flex items-center gap-2">
+                <UserIcon className="w-4 h-4 text-dim" />
+                <span className="text-xs font-bold text-text uppercase tracking-widest">
+                  {data.studentName}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Subjects Header */}
-          <div className="flex items-center justify-between mb-4 px-2">
-            <h2 className="text-xl font-bold text-text">Subjects</h2>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 bg-surface border border-border/50 rounded-xl text-xs font-medium text-sub hover:text-text transition-colors">
-                Yesterday
-              </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border/50 rounded-xl text-xs font-medium text-sub hover:text-text transition-colors">
-                <Calendar size={14} /> Date
-              </button>
-            </div>
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-text">Subjects</h2>
+            {data.lastUpdated && (
+              <span className="text-xs text-dim">
+                Updated: {data.lastUpdated}
+              </span>
+            )}
           </div>
 
           {/* Subjects List */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {data.subjects.map((sub, i) => {
               const subColor = getPercentageColorClass(sub.percentage);
-              const subBg = getPercentageBgClass(sub.percentage); // This now returns bg-green/20 etc
+              const subBg = getPercentageBgClass(sub.percentage);
               const solidBg = getPercentageSolidBgClass(sub.percentage);
               const missable = calculateMissable(sub.attendedClasses, sub.totalClasses);
               const needed = calculateNeeded(sub.attendedClasses, sub.totalClasses);
@@ -186,21 +178,18 @@ export default function AttendanceScreen() {
                 ? missable === 0 ? 'At the 75% line' : `Can miss ${missable} more class${missable === 1 ? '' : 'es'}`
                 : needed === 0 ? 'Needs attention' : `Attend ${needed} more class${needed === 1 ? '' : 'es'} to reach 75%`;
 
-              // Extract first letter for a clean fallback/icon
-              const initial = sub.subject ? sub.subject.charAt(0).toUpperCase() : 'B';
-
               return (
-                <div key={i} className="bg-card border border-border/60 rounded-3xl p-4 md:p-5 transition-transform hover:-translate-y-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-12 h-12 shrink-0 rounded-xl ${subBg} flex items-center justify-center`}>
+                <div key={i} className="glass-premium hover:border-primary/30 rounded-xl p-5 shadow-sm space-y-3 hover:scale-[1.01] active:scale-[0.99]">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-10 h-10 shrink-0 rounded-lg ${subBg} flex items-center justify-center`}>
                       <BookOpen className={`w-5 h-5 ${subColor}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-text font-bold text-[16px] md:text-lg truncate mb-1">
+                      <h3 className="text-text font-bold text-base md:text-lg tracking-tight mb-1 leading-snug">
                         {sub.subject}
                       </h3>
                       <p className="text-sub text-xs font-medium">
-                        {sub.attendedClasses} / {sub.totalClasses} classes
+                        {sub.attendedClasses} / {sub.totalClasses} classes attended
                       </p>
                     </div>
                     <div className={`font-extrabold text-xl md:text-2xl ${subColor}`}>
@@ -208,14 +197,14 @@ export default function AttendanceScreen() {
                     </div>
                   </div>
                   
-                  <div className="h-2 bg-surface rounded-full overflow-hidden mb-3">
+                  <div className="h-1.5 bg-surface rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full transition-all duration-1000 ${solidBg}`} 
+                      className={`h-full rounded-full transition-all duration-500 ${solidBg}`} 
                       style={{ width: `${Math.min(100, Math.max(0, sub.percentage))}%` }} 
                     />
                   </div>
                   
-                  <p className={`text-xs ${sub.percentage >= 75 ? 'text-sub font-medium' : `${subColor} font-semibold`}`}>
+                  <p className={`text-xs ${sub.percentage >= 75 ? 'text-sub font-medium' : `${subColor} font-bold`}`}>
                     {bufferLine}
                   </p>
                 </div>
@@ -223,95 +212,88 @@ export default function AttendanceScreen() {
             })}
           </div>
 
-          <div className="mt-8 flex items-center justify-center gap-2 text-sub opacity-80">
-            <Info size={14} />
-            <span className="text-xs font-medium">Fetched via In-App Service</span>
+          <div className="mt-8 flex items-center justify-center gap-2 text-sub/70">
+            <Info size={12} />
+            <span className="text-xs font-semibold uppercase tracking-wider">Synced via college database</span>
           </div>
         </div>
       );
     }
 
     return (
-      <form onSubmit={handleFetch} className="relative w-full max-w-md mx-auto mt-4 animate-fade-in font-outfit">
-        {/* Cool floating background blobs for the login form */}
-        <div className="absolute top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full mix-blend-screen filter blur-[50px] animate-blob"></div>
-        <div className="absolute bottom-10 -right-10 w-40 h-40 bg-teal/20 rounded-full mix-blend-screen filter blur-[50px] animate-blob animation-delay-2000"></div>
-
-        <div className="relative z-10 bg-surface/60 backdrop-blur-3xl border border-white/10 shadow-2xl shadow-black/40 rounded-[2.5rem] p-8 md:p-10">
+      <form onSubmit={handleFetch} className="w-full max-w-md mx-auto animate-fadeIn">
+        <div className="glass-premium shadow-lg rounded-[2rem] p-8 md:p-10 hover:scale-[1.005]">
           
           <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-teal rounded-[20px] flex items-center justify-center mb-5 shadow-lg shadow-primary/20 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-              <svg className="w-8 h-8 text-bg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-16 h-16 bg-primary text-bg rounded-2xl flex items-center justify-center shadow-sm mb-6 mx-auto">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-text mb-2 tracking-tight">Connect Portal</h2>
-            <p className="text-sub text-sm font-medium">Link your academic identity</p>
+            <h2 className="text-3xl font-extrabold text-text tracking-tight mb-2">Connect Portal</h2>
+            <p className="text-sub text-base font-medium">Link your academic identity</p>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div>
-              <div className="flex bg-bg/50 backdrop-blur-md rounded-[20px] p-1.5 border border-white/5">
+              <div className="flex bg-surface/30 border border-border/25 rounded-xl p-1">
                 <button 
                   type="button"
                   onClick={() => setCollege('aus')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all duration-300 ${college === 'aus' ? 'bg-primary text-bg shadow-[0_4px_12px_rgba(203,166,247,0.3)] scale-[1.02]' : 'text-sub hover:text-text hover:bg-surface/50'}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${college === 'aus' ? 'bg-primary text-bg shadow-sm' : 'text-sub hover:text-text hover:bg-surface/30'}`}
                 >
                   AUS
                 </button>
                 <button 
                   type="button"
                   onClick={() => setCollege('acet')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all duration-300 ${college === 'acet' ? 'bg-primary text-bg shadow-[0_4px_12px_rgba(203,166,247,0.3)] scale-[1.02]' : 'text-sub hover:text-text hover:bg-surface/50'}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer active:scale-[0.96] ${college === 'acet' ? 'bg-primary text-bg shadow-sm' : 'text-sub hover:text-text hover:bg-surface/30'}`}
                 >
                   ACET
                 </button>
               </div>
             </div>
             
-            <div className="space-y-1.5">
-              <label className="block text-text text-xs font-bold uppercase tracking-wider ml-2 opacity-80">Roll Number</label>
+            <div className="space-y-2">
+              <label className="block text-text text-xs font-bold uppercase tracking-wider ml-1">Roll Number</label>
               <input 
                 type="text" 
                 value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
-                placeholder="21A91A0501"
-                className="w-full bg-bg/50 backdrop-blur-sm border border-white/5 rounded-2xl px-5 py-4 text-text text-base focus:border-primary/50 focus:bg-surface/50 outline-none uppercase transition-all duration-300 placeholder:text-dim"
+                placeholder="e.g. 21A91A0501"
+                className="w-full bg-surface/30 hover:bg-surface/50 border border-border/25 focus:border-primary rounded-xl px-4 py-3 text-text text-base outline-none uppercase transition-all placeholder:text-dim active:scale-[0.99]"
                 required
               />
             </div>
             
-            <div className="space-y-1.5">
-              <label className="block text-text text-xs font-bold uppercase tracking-wider ml-2 opacity-80">Password</label>
+            <div className="space-y-2">
+              <label className="block text-text text-xs font-bold uppercase tracking-wider ml-1">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-bg/50 backdrop-blur-sm border border-white/5 rounded-2xl px-5 py-4 text-text text-base focus:border-primary/50 focus:bg-surface/50 outline-none transition-all duration-300 placeholder:text-dim"
+                className="w-full bg-surface/30 hover:bg-surface/50 border border-border/25 focus:border-primary rounded-xl px-4 py-3 text-text text-base outline-none transition-all placeholder:text-dim active:scale-[0.99]"
                 required
               />
             </div>
           </div>
 
           {error && (
-            <div className="mt-6 p-4 bg-red/10 border border-red/20 rounded-2xl flex items-start gap-3 text-red text-sm animate-fade-in">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <span className="font-medium">{error}</span>
+            <div className="mt-6 p-4 bg-red/10 border border-red/20 rounded-xl flex items-start gap-3 text-red text-xs animate-fadeIn">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span className="font-semibold">{error}</span>
             </div>
           )}
 
           <button 
             type="submit"
-            className="w-full relative group overflow-hidden rounded-2xl mt-8 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full rounded-xl py-3.5 px-6 font-bold text-base transition-all duration-200 flex items-center justify-center gap-2 border border-border/40 cursor-pointer bg-primary text-bg hover:scale-[1.015] active:scale-[0.97] disabled:opacity-50 shadow-sm mt-8"
           >
-            <span className="absolute inset-0 bg-gradient-to-r from-primary via-peach to-teal opacity-80 group-hover:opacity-100 transition-opacity duration-300"></span>
-            <div className="relative flex items-center justify-center gap-2 py-4">
-              <span className="text-bg font-bold text-lg tracking-wide">Connect</span>
-              <svg className="w-5 h-5 text-bg transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </div>
+            <span>Connect Portal</span>
+            <svg className="w-4 h-4 text-bg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
           </button>
         </div>
       </form>
@@ -319,20 +301,12 @@ export default function AttendanceScreen() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto font-outfit">
-      {/* Page Title only visible if no data, otherwise rely on hero */}
-      {!data && !loading && (
-        <div className="mb-6 hidden md:block text-center">
-          <h1 className="text-4xl font-extrabold text-text mb-2 tracking-tight">Attendance</h1>
-        </div>
-      )}
-
+    <div className="max-w-2xl mx-auto px-4 py-6 font-sans">
       {renderContent()}
     </div>
   );
 }
 
-// Inline helper for UserIcon
 function UserIcon({ className }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">

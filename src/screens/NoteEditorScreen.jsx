@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
-import { ArrowLeft, Edit3, Save, FileText, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Edit3, Save, FileText, ExternalLink, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { useAuth } from '../contexts/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 export default function NoteEditorScreen() {
   const { user } = useAuth();
@@ -19,6 +21,129 @@ export default function NoteEditorScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  
+  const [className, setClassName] = useState('');
+  const [breadcrumbHistory, setBreadcrumbHistory] = useState([]);
+
+  // Load class name if it is a class note
+  useEffect(() => {
+    if (!path) return;
+    const parts = path.split('/');
+    if (parts.length >= 3 && parts[2] === 'Notes') {
+      const classId = parts[1];
+      const fetchClassName = async () => {
+        try {
+          const classDoc = await getDoc(doc(db, 'classes', classId));
+          if (classDoc.exists()) {
+            setClassName(classDoc.data()?.name || 'Class');
+          } else {
+            setClassName('Class');
+          }
+        } catch (err) {
+          console.warn('Failed to load class name for breadcrumbs:', err);
+          setClassName('Class');
+        }
+      };
+      fetchClassName();
+    }
+  }, [path]);
+
+  // Construct breadcrumbs
+  useEffect(() => {
+    if (!path) {
+      setBreadcrumbHistory([]);
+      return;
+    }
+
+    const parts = path.split('/');
+    if (parts.length < 2) {
+      setBreadcrumbHistory([]);
+      return;
+    }
+
+    const formatDisplayName = (name) => {
+      if (!name) return '';
+      return name.replace(/__[0-9a-f]{4}$/i, '').replace(/\.md$/i, '');
+    };
+
+    const history = [];
+
+    if (parts[1] === 'Community') {
+      // Community notes flow
+      const uniLabel = parts[0] || 'University';
+      const rootFolder = `${parts[0]}/Community`;
+      
+      // Root university/community breadcrumb
+      history.push({
+        label: uniLabel,
+        url: `/app/notes?tab=community&folder=${encodeURIComponent(rootFolder)}`,
+        isActive: false
+      });
+
+      // Subfolders
+      for (let i = 2; i < parts.length - 1; i++) {
+        const folderPath = parts.slice(0, i + 1).join('/');
+        history.push({
+          label: formatDisplayName(parts[i]),
+          url: `/app/notes?tab=community&folder=${encodeURIComponent(folderPath)}`,
+          isActive: false
+        });
+      }
+
+      // Active file
+      history.push({
+        label: formatDisplayName(parts[parts.length - 1]),
+        url: '#',
+        isActive: true
+      });
+    } else if (parts.length >= 3 && parts[2] === 'Notes') {
+      // Class notes flow
+      const classId = parts[1];
+      const classLabel = className || 'Class';
+
+      // 1. Classes tab
+      history.push({
+        label: 'Classes',
+        url: '/app/notes?tab=classes',
+        isActive: false
+      });
+
+      // 2. Class home
+      history.push({
+        label: classLabel,
+        url: `/app/class-notes?classId=${classId}&className=${encodeURIComponent(classLabel)}`,
+        isActive: false
+      });
+
+      // 3. Subfolders (if any)
+      for (let i = 3; i < parts.length - 1; i++) {
+        const folderPath = parts.slice(0, i + 1).join('/');
+        history.push({
+          label: formatDisplayName(parts[i]),
+          url: `/app/class-notes?classId=${classId}&className=${encodeURIComponent(classLabel)}&folder=${encodeURIComponent(folderPath)}`,
+          isActive: false
+        });
+      }
+
+      // 4. Active file
+      history.push({
+        label: formatDisplayName(parts[parts.length - 1]),
+        url: '#',
+        isActive: true
+      });
+    }
+
+    setBreadcrumbHistory(history);
+  }, [path, className]);
+
+  const handleBack = () => {
+    if (breadcrumbHistory.length > 1) {
+      const parentUrl = breadcrumbHistory[breadcrumbHistory.length - 2].url;
+      navigate(parentUrl);
+    } else {
+      navigate('/app/notes');
+    }
+  };
 
   useEffect(() => {
     if (path) {
@@ -73,24 +198,49 @@ export default function NoteEditorScreen() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-text hover:bg-surface/50 rounded-full transition-colors">
-            <ArrowLeft size={22} />
-          </button>
-          <h1 className="text-2xl font-bold text-text truncate max-w-lg">
-            {path ? path.split('/').pop().replace(/\.md$/i, '') : 'Note'}
-          </h1>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-4">
+            <button onClick={handleBack} className="p-2 -ml-2 text-text hover:bg-surface/50 rounded-full transition-colors">
+              <ArrowLeft size={22} />
+            </button>
+            <h1 className="text-2xl font-bold text-text truncate max-w-lg">
+              {path ? path.split('/').pop().replace(/\.md$/i, '') : 'Note'}
+            </h1>
+          </div>
+          
+          {isEditing ? (
+            <button onClick={handleSave} className="flex items-center gap-2 bg-green/20 text-green px-4 py-2 rounded-xl font-medium transition-colors hover:bg-green/30">
+              <Save size={18} /> Save
+            </button>
+          ) : (
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-primary/20 text-primary px-4 py-2 rounded-xl font-medium transition-colors hover:bg-primary/30">
+              <Edit3 size={18} /> Edit
+            </button>
+          )}
         </div>
-        
-        {isEditing ? (
-          <button onClick={handleSave} className="flex items-center gap-2 bg-green/20 text-green px-4 py-2 rounded-xl font-medium transition-colors hover:bg-green/30">
-            <Save size={18} /> Save
-          </button>
-        ) : (
-          <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-primary/20 text-primary px-4 py-2 rounded-xl font-medium transition-colors hover:bg-primary/30">
-            <Edit3 size={18} /> Edit
-          </button>
+
+        {/* Breadcrumb Trail */}
+        {breadcrumbHistory.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 text-sub text-sm font-medium ml-10">
+            {breadcrumbHistory.map((item, idx) => (
+              <span key={idx} className="flex items-center gap-1.5">
+                {idx > 0 && <ChevronRight size={14} className="text-dim shrink-0" />}
+                {item.isActive ? (
+                  <span className="text-primary truncate max-w-[150px] font-semibold">
+                    {item.label}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => navigate(item.url)}
+                    className="hover:text-primary transition-colors truncate max-w-[150px]"
+                  >
+                    {item.label}
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
@@ -165,7 +315,7 @@ export default function NoteEditorScreen() {
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
               >
-                {content || '*Empty note*'}
+                {getFilteredContent(content) || '*Empty note*'}
               </ReactMarkdown>
             </div>
           </>
@@ -174,3 +324,49 @@ export default function NoteEditorScreen() {
     </div>
   );
 }
+
+const getFilteredContent = (rawContent) => {
+  if (!rawContent) return '';
+  const lines = rawContent.split('\n');
+  const filteredLines = [];
+  
+  const isPdfLinkLine = (line) => {
+    const trimmed = line.trim().replace(/^[-*+\d.]\s+/, ''); // strip list bullet
+    return /^\[[^\]]+\]\([^)]+\.pdf(?:[^)]*)?\)$/i.test(trimmed);
+  };
+
+  const isFilesHeader = (line) => {
+    const trimmed = line.trim().toLowerCase().replace(/[#*\s:]/g, '');
+    return trimmed === 'files';
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isPdfLinkLine(line)) {
+      continue;
+    }
+    
+    if (isFilesHeader(line)) {
+      let hasOnlyPdfLinksAfter = false;
+      let foundPdfLink = false;
+      for (let j = i + 1; j < lines.length; j++) {
+        const nextLine = lines[j].trim();
+        if (!nextLine) continue;
+        if (isPdfLinkLine(nextLine)) {
+          foundPdfLink = true;
+          hasOnlyPdfLinksAfter = true;
+        } else {
+          hasOnlyPdfLinksAfter = false;
+          break;
+        }
+      }
+      if (foundPdfLink && hasOnlyPdfLinksAfter) {
+        continue;
+      }
+    }
+    
+    filteredLines.push(line);
+  }
+  
+  return filteredLines.join('\n');
+};

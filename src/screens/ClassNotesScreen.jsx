@@ -10,9 +10,9 @@ import { db } from '../services/firebase';
 
 export default function ClassNotesScreen() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { userProfile } = useTheme();
-  const { user } = useAuth();
+  const { user = null } = useAuth() || {};
 
   const classId = searchParams.get('classId') || '';
   const className = decodeURIComponent(searchParams.get('className') || 'Class');
@@ -33,14 +33,29 @@ export default function ClassNotesScreen() {
   const [currentPath, setCurrentPath] = useState(rootPath);
   const [pathHistory, setPathHistory] = useState([rootPath]);
 
-  // Update root path when university profile loads
+  // Update path/history when universityFolder, classId or folder query param changes
   useEffect(() => {
     if (universityFolder && classId) {
       const newRoot = `${universityFolder}/${classId}/Notes`;
-      setCurrentPath(newRoot);
-      setPathHistory([newRoot]);
+      const folderParam = searchParams.get('folder');
+      if (folderParam && folderParam.startsWith(newRoot)) {
+        setCurrentPath(folderParam);
+        // Reconstruct pathHistory from newRoot to folderParam
+        const suffix = folderParam.substring(newRoot.length);
+        const parts = suffix.split('/').filter(Boolean);
+        const history = [newRoot];
+        let running = newRoot;
+        for (const part of parts) {
+          running = `${running}/${part}`;
+          history.push(running);
+        }
+        setPathHistory(history);
+      } else {
+        setCurrentPath(newRoot);
+        setPathHistory([newRoot]);
+      }
     }
-  }, [universityFolder, classId]);
+  }, [universityFolder, classId, searchParams]);
 
   // Load class metadata
   useEffect(() => {
@@ -94,8 +109,8 @@ export default function ClassNotesScreen() {
 
   const navigateTo = (item) => {
     if (item.type === 'dir') {
-      setPathHistory([...pathHistory, item.path]);
-      setCurrentPath(item.path);
+      const newPath = item.path;
+      setSearchParams({ classId, className, folder: newPath });
     } else {
       navigate(`/app/note?path=${encodeURIComponent(item.path)}`);
     }
@@ -105,8 +120,8 @@ export default function ClassNotesScreen() {
     if (pathHistory.length > 1) {
       const newHistory = [...pathHistory];
       newHistory.pop();
-      setPathHistory(newHistory);
-      setCurrentPath(newHistory[newHistory.length - 1]);
+      const newPath = newHistory[newHistory.length - 1];
+      setSearchParams({ classId, className, folder: newPath });
     } else {
       navigate('/app/notes?tab=classes');
     }
@@ -254,8 +269,8 @@ export default function ClassNotesScreen() {
                 <button
                   onClick={() => {
                     const newHistory = pathHistory.slice(0, idx + 1);
-                    setPathHistory(newHistory);
-                    setCurrentPath(newHistory[newHistory.length - 1]);
+                    const newPath = newHistory[newHistory.length - 1];
+                    setSearchParams({ classId, className, folder: newPath });
                   }}
                   className={`hover:text-primary transition-colors truncate max-w-[150px] font-medium ${idx === pathHistory.length - 1 ? 'text-primary' : ''}`}
                 >
@@ -327,7 +342,7 @@ export default function ClassNotesScreen() {
                   <div
                     key={item.path || idx}
                     onClick={() => navigateTo(item)}
-                    className={`bg-surface/30 hover:bg-surface border border-border/40 ${style.border} rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group`}
+                    className="glass-premium hover:border-primary/40 rounded-2xl p-5 flex items-center gap-4 cursor-pointer group shadow-sm hover:scale-[1.015] active:scale-[0.985] transition-all"
                   >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${style.bg} ${style.text}`}>
                       {getIconForItem(item.path, item.name, item.type)}

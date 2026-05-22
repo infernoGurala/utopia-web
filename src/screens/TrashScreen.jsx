@@ -76,7 +76,7 @@ export default function TrashScreen({ universityId, onClose, onRestored }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/70 backdrop-blur-sm p-4">
-      <div className="bg-surface border border-border/60 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+      <div className="glass-premium rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-fadeIn">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border/40">
           <div className="flex items-center gap-3">
@@ -125,7 +125,7 @@ export default function TrashScreen({ universityId, onClose, onRestored }) {
                 return (
                   <div 
                     key={item.id} 
-                    className={`bg-bg/60 border border-border/40 rounded-2xl p-4 flex items-center gap-4 transition-opacity ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                    className={`glass-premium rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
                   >
                     {/* Icon */}
                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
