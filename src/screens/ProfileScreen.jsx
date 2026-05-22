@@ -3,28 +3,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { User, Settings, Shield, Bell, Palette, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../theme/themes';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
 
 export default function ProfileScreen() {
   const { user } = useAuth();
-  const { currentThemeId } = useTheme();
+  const { currentThemeId, changeTheme } = useTheme();
   const [updatingTheme, setUpdatingTheme] = useState(false);
   const [isThemeExpanded, setIsThemeExpanded] = useState(true); // Open by default for easier go-to theme selection
 
   const handleThemeChange = async (themeKey) => {
-    if (!user || updatingTheme) return;
+    if (updatingTheme) return;
     setUpdatingTheme(true);
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { themeAccent: themeKey });
+      await changeTheme(themeKey);
     } catch (error) {
       console.error('Error updating theme:', error);
     } finally {
       setUpdatingTheme(false);
     }
   };
-  
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 font-sans animate-fadeIn">
       {/* Title */}
@@ -32,7 +29,7 @@ export default function ProfileScreen() {
         <h1 className="text-3xl font-extrabold text-text mb-2">Profile</h1>
         <p className="text-sub text-base">Configure your personal preferences, look-and-feel, and university credentials.</p>
       </div>
-      
+
       {/* Profile Header */}
       <div className="glass-premium rounded-2xl p-6 flex flex-col sm:flex-row gap-6 items-center sm:items-start mb-8 shadow-sm hover:scale-[1.01] duration-300">
         <div className="w-20 h-20 bg-surface border border-border/60 rounded-xl flex items-center justify-center shrink-0">

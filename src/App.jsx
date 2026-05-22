@@ -10,7 +10,6 @@ import NoteEditorScreen from './screens/NoteEditorScreen';
 import ClassNotesScreen from './screens/ClassNotesScreen';
 import FocusScreen from './screens/FocusScreen';
 
-
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   
@@ -54,7 +53,6 @@ function App() {
               <Route path="profile" element={<ProfileScreen />} />
               <Route path="note" element={<NoteEditorScreen />} />
               <Route path="focus" element={<FocusScreen />} />
-
             </Route>
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
