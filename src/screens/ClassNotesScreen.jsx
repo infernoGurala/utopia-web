@@ -244,7 +244,7 @@ export default function ClassNotesScreen() {
             </button>
             <div>
               <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-1 select-none">
-                <span className="font-sans font-black uppercase text-2xl md:text-3xl tracking-tight mr-1.5">
+                <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-1.5">
                   {className.split(' ')[0] || ''}
                 </span>
                 {className.substring((className.split(' ')[0] || '').length) && (

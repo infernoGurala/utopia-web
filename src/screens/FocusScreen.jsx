@@ -667,7 +667,7 @@ export default function FocusScreen() {
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
-            <span className="font-serif font-black uppercase text-2xl md:text-3xl tracking-tight mr-2">Focus</span>
+            <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-2">Focus</span>
             <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">& routine</span>
           </h1>
           <p className="text-dim text-xs font-serif italic">Productive space to think and grow.</p>

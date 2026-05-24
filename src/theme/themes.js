@@ -20,10 +20,10 @@ export const themes = {
     isDark: false,
   },
   'primary-dark': {
-    bg: '#0a0a0a',         // Velvety rich deep black
-    surface: '#121212',    // Dark gray panel surface
-    card: '#161616',       // Velvet carbon card bg
-    border: '#3a3a3a',     // Subtle graphite gray borders
+    bg: '#261F2E',         // Deep elegant eggplant/purple background
+    surface: '#201C26',    // Purplish-gray sidebar / panel surface
+    card: '#2d2537',       // Lighter purple card bg for contrast
+    border: '#40354a',     // Subtle purple-tinted borders
     text: '#fbfbfa',       // Crisp paper white text
     sub: '#a6a6a6',        // Refined cool light gray text
     dim: '#767676',        // Muted mid-gray

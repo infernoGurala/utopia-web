@@ -27,7 +27,7 @@ export default function ProfileScreen() {
       {/* Title */}
       <div className="mb-8">
         <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
-          <span className="font-sans font-black uppercase text-2xl md:text-3xl tracking-tight mr-2">User</span>
+          <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-2">User</span>
           <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">profile</span>
         </h1>
         <p className="text-sub text-sm">Configure your personal preferences, look-and-feel, and university credentials.</p>

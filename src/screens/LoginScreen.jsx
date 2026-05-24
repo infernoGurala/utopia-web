@@ -28,7 +28,8 @@ export default function LoginScreen() {
       <div className="w-full md:w-1/2 bg-[#fbfbfa] flex flex-col justify-between p-8 md:p-16 lg:p-24 shrink-0 min-h-[50vh] md:min-h-screen">
         
         {/* Top Spacer or Header */}
-        <div className="editorial-text-spaced text-dim">
+        {/* Top Spacer or Header */}
+        <div className="editorial-text-spaced text-[#7c7c7c]">
           UT.01 / ACADEMIA
         </div>
 
@@ -42,7 +43,7 @@ export default function LoginScreen() {
             A c a d e m i a
           </span>
           
-          <p className="font-serif italic text-lg md:text-xl text-sub font-light leading-relaxed mb-12 max-w-sm">
+          <p className="font-serif italic text-lg md:text-xl text-[#4c4c4c] font-light leading-relaxed mb-12 max-w-sm">
             "A sanctuary for the quiet focus and deep thought of the modern academic mind."
           </p>
 
@@ -78,7 +79,7 @@ export default function LoginScreen() {
             <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
               01 / FOCUS
             </div>
-            <div className="font-serif italic text-xs text-sub leading-normal">
+            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
               Silent solitude of the desk.
             </div>
           </div>
@@ -86,7 +87,7 @@ export default function LoginScreen() {
             <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
               02 / JOURNAL
             </div>
-            <div className="font-serif italic text-xs text-sub leading-normal">
+            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
               Ink marks the passing thought.
             </div>
           </div>
@@ -94,7 +95,7 @@ export default function LoginScreen() {
             <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
               03 / TEMPLE
             </div>
-            <div className="font-serif italic text-xs text-sub leading-normal">
+            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
               Time slips into quiet order.
             </div>
           </div>
@@ -103,7 +104,7 @@ export default function LoginScreen() {
       </div>
 
       {/* RIGHT HALF - Rich Black Gallery Solitude Aesthetic */}
-      <div className="w-full md:w-1/2 bg-[#0a0a0a] flex items-center justify-center p-8 md:p-16 min-h-[50vh] md:min-h-screen relative shrink-0">
+      <div className="w-full md:w-1/2 bg-[#261F2E] flex items-center justify-center p-8 md:p-16 min-h-[50vh] md:min-h-screen relative shrink-0">
         
         {/* Large abstract typographic background art */}
         <div className="absolute inset-0 flex flex-col justify-center p-12 md:p-20 lg:p-24 select-none pointer-events-none">
@@ -117,9 +118,9 @@ export default function LoginScreen() {
 
         {/* Subdued top navigation item right in the corner, matching references */}
         <div className="absolute top-8 md:top-16 right-8 md:right-16 flex gap-6 md:gap-10">
-          <span className="editorial-text-spaced text-white/40 select-none hover:text-white/80 transition-colors cursor-pointer text-[10px]">Journal</span>
-          <span className="editorial-text-spaced text-white/40 select-none hover:text-white/80 transition-colors cursor-pointer text-[10px]">Library</span>
-          <span className="editorial-text-spaced text-white/40 select-none hover:text-white/80 transition-colors cursor-pointer text-[10px]">Sanctuary</span>
+          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Journal</span>
+          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Library</span>
+          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Sanctuary</span>
         </div>
 
         {/* Small minimalist text block inside the black section */}
@@ -134,15 +135,15 @@ export default function LoginScreen() {
 
         {/* Bottom copyright detail */}
         <div className="absolute bottom-8 right-8 md:right-16">
-          <span className="editorial-text-spaced text-white/20 text-[9px]">© Utopia Studio</span>
+          <span className="editorial-text-spaced text-white/60 text-[9px]">© INFERNUM</span>
         </div>
 
       </div>
 
-      {/* OVERLAPPING FROSTED GLASS CAPSULE - Exactly in the center of the screen split */}
+      {/* OVERLAPPING SOLID CONTRAST CAPSULE - Exactly in the center of the screen split */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none hidden md:block">
-        <div className="glass-pill-premium rounded-full py-4 px-10 border shadow-2xl shrink-0 whitespace-nowrap animate-fadeIn">
-          <span className="font-serif italic text-sm md:text-base text-[#121212] dark:text-[#fbfbfa] tracking-wider select-none">
+        <div className="bg-[#fbfbfa] border border-[#121212]/15 rounded-full py-4 px-10 shadow-2xl shrink-0 whitespace-nowrap animate-fadeIn">
+          <span className="font-serif italic text-sm md:text-base text-[#121212] tracking-wider select-none">
             "Photography for the timeless."
           </span>
         </div>

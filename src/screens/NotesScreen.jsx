@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
 import { TrashService } from '../services/TrashService';
-import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, BookOpen, Users, Crown, Pen, Eye, Search, X } from 'lucide-react';
+import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, Users, Crown, Pen, Eye } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getLucideIcon } from '../utils/IconMap';
 import { useTheme } from '../contexts/ThemeContext';
@@ -73,7 +73,7 @@ export default function NotesScreen() {
   const [classesError, setClassesError] = useState('');
 
   // --- Search & Filter States ---
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchQuery = '';
 
   // --- Recent Notes States ---
   const [recentNotes, setRecentNotes] = useState([]);
@@ -431,7 +431,7 @@ export default function NotesScreen() {
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
-            <span className="font-sans font-black uppercase text-2xl md:text-3xl tracking-tight mr-2">Note</span>
+            <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-2">Note</span>
             <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">books</span>
           </h1>
           
@@ -544,53 +544,7 @@ export default function NotesScreen() {
         </button>
       </div>
 
-      {/* Quick Access / Recent Notes Section */}
-      {recentNotes.length > 0 && activeTab === 'community' && !searchQuery && (
-        <div className="mb-8 animate-fadeIn">
-          <h2 className="editorial-text-spaced text-dim text-[9px] mb-3">
-            Quick Access
-          </h2>
-          <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
-            {recentNotes.map((note) => (
-              <button
-                key={note.path}
-                onClick={() => navigate(`/app/note?path=${encodeURIComponent(note.path)}`)}
-                className="flex items-center gap-3 bg-surface border border-border/60 hover:border-text rounded-none px-4 py-3.5 shrink-0 text-left cursor-pointer group transition-all"
-              >
-                <div className="w-7 h-7 rounded-none bg-surface border border-border/30 flex items-center justify-center text-text">
-                  <FileText size={13} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-text truncate max-w-[130px]">{formatDisplayName(note.name)}</h4>
-                  <p className="text-[8px] text-dim tracking-wider uppercase font-medium">Opened {new Date(note.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Search Input Container */}
-      <div className="relative mb-8 max-w-md animate-fadeIn">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-dim">
-          <Search size={13} />
-        </div>
-        <input 
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={activeTab === 'community' ? "Search folders & notes..." : "Search courses & codes..."}
-          className="w-full bg-surface hover:bg-border/10 focus:bg-surface focus:border-text border border-border/60 rounded-none pl-10 pr-4 py-3 text-xs font-medium text-text placeholder-text/30 focus:outline-none transition-colors"
-        />
-        {searchQuery && (
-          <button 
-            onClick={() => setSearchQuery('')}
-            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-dim hover:text-text transition-colors"
-          >
-            <X size={13} />
-          </button>
-        )}
-      </div>
 
       {/* Active Tab Screen Area */}
       <div>
@@ -629,7 +583,7 @@ export default function NotesScreen() {
                           {getIconForItem(item.path, item.name, item.type)}
                         </div>
                         <div className="flex-1 min-w-0 flex items-center h-full">
-                          <h3 className="text-text font-serif font-light tracking-tight truncate text-[16px]">{formatDisplayName(item.name)}</h3>
+                          <h3 className="text-text font-sans font-medium tracking-tight truncate text-[15px]">{formatDisplayName(item.name)}</h3>
                         </div>
                         
                         {isEditMode && (
@@ -712,9 +666,9 @@ export default function NotesScreen() {
                       className="card-premium-mono rounded-none p-6 cursor-pointer group"
                     >
                       <div className="w-12 h-12 bg-surface text-text rounded-none flex items-center justify-center mb-4 border border-border/40">
-                        <span className="font-serif font-light text-lg">{(cls.classCode || cls.name?.[0] || 'C').charAt(0)}</span>
+                        <span className="font-sans font-medium text-lg">{(cls.classCode || cls.name?.[0] || 'C').charAt(0)}</span>
                       </div>
-                      <h3 className="text-text font-serif font-light text-base md:text-[17px] tracking-tight mb-1 truncate uppercase leading-snug">
+                      <h3 className="text-text font-sans font-medium text-sm md:text-[15px] tracking-tight mb-1 truncate uppercase leading-snug">
                         {cls.name || 'Unnamed Class'}
                       </h3>
                       <div className="flex items-center gap-1.5 text-dim text-xs mb-4 font-medium tracking-wide">

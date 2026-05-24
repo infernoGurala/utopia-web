@@ -229,7 +229,7 @@ export default function AttendanceScreen() {
               </svg>
             </div>
             <h2 className="tracking-tight mb-1 select-none">
-              <span className="font-sans font-black uppercase text-xl tracking-wider text-text mr-1.5">Connect</span>
+              <span className="font-serif font-light uppercase text-xl tracking-wider text-text mr-1.5">Connect</span>
               <span className="font-serif font-light italic text-2xl text-dim lowercase">portal</span>
             </h2>
             <p className="editorial-text-spaced text-dim text-[9px] tracking-[0.2em]">Link your academic identity</p>
