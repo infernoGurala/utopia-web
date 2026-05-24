@@ -1,165 +1,44 @@
 export const themes = {
-  'catppuccin-latte': {
-    bg: '#EFF1F5',
-    surface: '#DCE0E8',
-    card: '#CCD0DA',
-    border: '#BCC0CC',
-    text: '#4C4F69',
-    sub: '#6C6F85',
-    dim: '#8C8FA1',
-    primary: '#8839EF',
-    teal: '#179299',
-    red: '#D20F39',
-    green: '#40A02B',
-    peach: '#FE640B',
-    blue: '#1E66F5',
-    gold: '#DF8E1D',
-    sky: '#04A5E5',
-    lavender: '#7287FD',
-    gray: '#9CA0B0',
+  'primary-light': {
+    bg: '#fbfbfa',         // Crisp luxury white paper feel
+    surface: '#f4f4f3',    // Light warm gray panel surface
+    card: '#ffffff',       // Pure white cards
+    border: '#1a1a1a',     // Thin, sharp rich black borders
+    text: '#121212',       // Rich black text
+    sub: '#4c4c4c',        // Deep graphite dark gray
+    dim: '#7c7c7c',        // Elegant mid-gray
+    primary: '#121212',    // Rich black primary accent
+    teal: '#2a2a2a',       // Deep steel gray for tertiary states
+    red: '#4c4c4c',        // Monochrome alert / critical state
+    green: '#121212',      // Pure black for positive indicators
+    peach: '#4c4c4c',      // Soft mid-dark gray
+    blue: '#121212',       // Classic monochrome
+    gold: '#7c7c7c',       // Muted gray gold substitute
+    sky: '#626262',        // Muted gray
+    lavender: '#4c4c4c',   // Soft dark gray
+    gray: '#7c7c7c',       // Balanced gray
     isDark: false,
   },
-  'rose-pine-dawn': {
-    bg: '#FAF4ED',
-    surface: '#F2E9E1',
-    card: '#FFFAF3',
-    border: '#DFDAD9',
-    text: '#575279',
-    sub: '#797593',
-    dim: '#9893A5',
-    primary: '#D7827E',
-    teal: '#286983',
-    red: '#B4637A',
-    green: '#286983',
-    peach: '#EA9D34',
-    blue: '#286983',
-    gold: '#EA9D34',
-    sky: '#56949F',
-    lavender: '#907AA9',
-    gray: '#797593',
-    isDark: false,
-  },
-  'mint-light': {
-    bg: '#F2FBF7',
-    surface: '#E5F5ED',
-    card: '#FFFFFF',
-    border: '#BCE3CE',
-    text: '#2C4336',
-    sub: '#567C65',
-    dim: '#86A391',
-    primary: '#1E8F6A',
-    teal: '#0C7A65',
-    red: '#E05B5B',
-    green: '#2C9C4E',
-    peach: '#E88A4A',
-    blue: '#2B7ABF',
-    gold: '#D69A1C',
-    sky: '#3899B5',
-    lavender: '#8B6CBF',
-    gray: '#7A9386',
-    isDark: false,
-  },
-  'one-light': {
-    bg: '#FAFAFA',
-    surface: '#F0F0F1',
-    card: '#FFFFFF',
-    border: '#E5E5E6',
-    text: '#383A42',
-    sub: '#696C77',
-    dim: '#A0A1A7',
-    primary: '#4078F2',
-    teal: '#0184BC',
-    red: '#E45649',
-    green: '#50A14F',
-    peach: '#D19A66',
-    blue: '#4078F2',
-    gold: '#C18401',
-    sky: '#0184BC',
-    lavender: '#A626A4',
-    gray: '#696C77',
-    isDark: false,
-  },
-  'orchid': {
-    bg: '#0F0F17',
-    surface: '#1A1A27',
-    card: '#1F1F2E',
-    border: '#2A2A3D',
-    text: '#E8E8F0',
-    sub: '#8888A8',
-    dim: '#44445A',
-    primary: '#CBA6F7',
-    teal: '#94E2D5',
-    red: '#F38BA8',
-    green: '#A6E3A1',
-    peach: '#FAB387',
-    blue: '#89B4FA',
-    gold: '#F9E2AF',
-    sky: '#89DCEB',
-    lavender: '#B4BEFE',
-    gray: '#A6ADC8',
-    isDark: true,
-  },
-  'gruvbox': {
-    bg: '#282828',
-    surface: '#32302F',
-    card: '#3C3836',
-    border: '#504945',
-    text: '#EBDBB2',
-    sub: '#C4B59C',
-    dim: '#665C54',
-    primary: '#FB4934',
-    teal: '#8EC07C',
-    red: '#FB4934',
-    green: '#B8BB26',
-    peach: '#E6B450',
-    blue: '#83A598',
-    gold: '#FAB387',
-    sky: '#8EC07C',
-    lavender: '#83A598',
-    gray: '#A89984',
-    isDark: true,
-  },
-  'everforest': {
-    bg: '#272E33',
-    surface: '#333C43',
-    card: '#3E474C',
-    border: '#4E5660',
-    text: '#D5C4A1',
-    sub: '#B0B0B0',
-    dim: '#5A6268',
-    primary: '#A7C080',
-    teal: '#7FAAA7',
-    red: '#E67F5C',
-    green: '#A7C080',
-    peach: '#FAB387',
-    blue: '#7FAAA7',
-    gold: '#E6B450',
-    sky: '#7FAAA7',
-    lavender: '#8DA101',
-    gray: '#B0B0B0',
-    isDark: true,
-  },
-  'github-dark': {
-    bg: '#0D1117',
-    surface: '#161B22',
-    card: '#21262D',
-    border: '#30363D',
-    text: '#C9D1D9',
-    sub: '#8B949E',
-    dim: '#484F58',
-    primary: '#58A6FF',
-    teal: '#3FB950',
-    red: '#F85149',
-    green: '#56D364',
-    peach: '#D29922',
-    blue: '#58A6FF',
-    gold: '#D29922',
-    sky: '#56D364',
-    lavender: '#A371F7',
-    gray: '#8B949E',
+  'primary-dark': {
+    bg: '#0a0a0a',         // Velvety rich deep black
+    surface: '#121212',    // Dark gray panel surface
+    card: '#161616',       // Velvet carbon card bg
+    border: '#3a3a3a',     // Subtle graphite gray borders
+    text: '#fbfbfa',       // Crisp paper white text
+    sub: '#a6a6a6',        // Refined cool light gray text
+    dim: '#767676',        // Muted mid-gray
+    primary: '#fbfbfa',    // Pure paper white primary accent
+    teal: '#d6d6d6',       // Off-white/silver tertiary accent
+    red: '#c6c6c6',        // Monochrome alert / critical state
+    green: '#fbfbfa',      // Pure white for positive indicators
+    peach: '#a6a6a6',      // Mid-light silver gray
+    blue: '#fbfbfa',       // Monochrome
+    gold: '#767676',       // Muted dark silver
+    sky: '#8e8e8e',        // Silver gray
+    lavender: '#a6a6a6',   // Cool gray
+    gray: '#767676',       // Balanced dark silver
     isDark: true,
   }
 };
 
-export const defaultTheme = 'catppuccin-latte';
-
+export const defaultTheme = 'primary-light';

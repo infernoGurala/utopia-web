@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { focusService, initFocusSupabase } from '../services/focusService';
+import UtopiaLoader from '../components/UtopiaLoader';
 import { 
   Sparkles, Flame, Calendar, Bell, BarChart2, Plus, Trash2, Edit3, Check, 
   Square, CheckSquare, Search, ChevronLeft, ChevronRight, Info, 
@@ -665,13 +666,16 @@ export default function FocusScreen() {
       {/* Dynamic Header */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-text mb-2">Focus & Routine</h1>
-          <p className="text-sub text-[15px] md:text-[17px]">Quietly organize your day. Distraction-free checklists, journal logs, and habits.</p>
+          <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
+            <span className="font-serif font-black uppercase text-2xl md:text-3xl tracking-tight mr-2">Focus</span>
+            <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">& routine</span>
+          </h1>
+          <p className="text-dim text-xs font-serif italic">Productive space to think and grow.</p>
         </div>
       </div>
 
       {/* Clean segmented tab selector */}
-      <div className="flex glass-premium p-1 rounded-xl max-w-lg mb-6 overflow-x-auto hide-scrollbar">
+      <div className="flex bg-surface border border-border p-0.5 rounded-none max-w-lg mb-8 overflow-x-auto hide-scrollbar select-none font-sans">
         {[
           { id: 'habits', label: 'Habits' },
           { id: 'tasks', label: 'Tasks' },
@@ -693,9 +697,9 @@ export default function FocusScreen() {
                 handleOpenDailyNote(selectedDate);
               }
             }}
-            className={`flex-grow py-2 px-3 text-[11px] font-extrabold uppercase tracking-widest rounded-lg premium-transition cursor-pointer text-center whitespace-nowrap hover:scale-[1.02] active:scale-[0.96] ${
+            className={`flex-grow py-2.5 px-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-colors cursor-pointer text-center whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-primary text-bg shadow-sm shadow-primary/15'
+                ? 'bg-text text-bg'
                 : 'text-sub hover:text-text'
             }`}
           >
@@ -705,9 +709,9 @@ export default function FocusScreen() {
       </div>
 
       {/* Main Content Area */}
-      {loading && activeTab !== 'habits' && activeTab !== 'tasks' && activeTab !== 'journal' ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      {loading ? (
+        <div className="flex justify-center items-center py-20 select-none">
+          <UtopiaLoader />
         </div>
       ) : (
         <div className="transition-all duration-300">
@@ -718,18 +722,23 @@ export default function FocusScreen() {
           {activeTab === 'habits' && (
             <div className="space-y-6">
               {/* Date navigation bar */}
-              <div className="glass-premium rounded-[1.75rem] p-5 space-y-4 shadow-sm">
+              <div className="card-premium-mono rounded-none p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
-                    <h2 className="text-lg font-extrabold text-text tracking-tight">
-                      {parseLocalDate(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                    <h2 className="tracking-tight leading-none flex items-baseline select-none">
+                      <span className="font-serif font-light italic text-xl md:text-2xl text-text capitalize mr-2">
+                        {parseLocalDate(selectedDate).toLocaleDateString(undefined, { weekday: 'long' })}
+                      </span>
+                      <span className="font-sans font-black text-xs uppercase tracking-[0.15em] text-dim">
+                        {parseLocalDate(selectedDate).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
+                      </span>
                     </h2>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => handleOpenDailyNote(getLocalDateString())}
-                      className="px-3.5 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold hover:bg-primary/25 hover:scale-[1.02] active:scale-[0.96] transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 border border-border text-text rounded-none text-xs font-semibold hover:bg-text hover:text-bg transition-all cursor-pointer uppercase tracking-wider"
                     >
                       Today
                     </button>
@@ -737,18 +746,18 @@ export default function FocusScreen() {
                       type="date"
                       value={selectedDate}
                       onChange={(e) => handleOpenDailyNote(e.target.value)}
-                      className="bg-bg border border-border/35 px-3 py-1.5 rounded-xl text-xs font-semibold text-text focus:outline-none focus:border-primary transition-all cursor-pointer"
+                      className="bg-bg border border-border px-3 py-1.5 rounded-none text-xs font-semibold text-text focus:outline-none focus:border-text transition-all cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* Elegant week navigation strip */}
-                <div className="border-t border-border/10 pt-4 flex items-center justify-between">
-                  <button onClick={() => shiftWeek(-1)} className="p-2 text-dim hover:text-primary hover:bg-surface/30 rounded-xl transition-all cursor-pointer">
+                <div className="border-t border-border/40 pt-4 flex items-center justify-between">
+                  <button onClick={() => shiftWeek(-1)} className="p-2 text-dim hover:text-text hover:bg-surface border border-transparent hover:border-border rounded-none transition-all cursor-pointer">
                     <ChevronLeft size={16} />
                   </button>
 
-                  <div className="flex-grow max-w-lg mx-auto grid grid-cols-7 gap-1">
+                  <div className="flex-grow max-w-lg mx-auto grid grid-cols-7 gap-1 font-sans">
                     {Array.from({ length: 7 }).map((_, i) => {
                       const day = new Date(weekStart);
                       day.setDate(weekStart.getDate() + i);
@@ -761,39 +770,41 @@ export default function FocusScreen() {
                         <button
                           key={i}
                           onClick={() => handleOpenDailyNote(dayStr)}
-                          className={`py-2 rounded-xl flex flex-col items-center justify-center premium-transition hover:scale-[1.04] active:scale-[0.95] ${
+                          className={`py-2 rounded-none flex flex-col items-center justify-center transition-all ${
                             isSelected 
-                              ? 'bg-primary text-bg font-extrabold shadow-sm scale-105' 
-                              : 'text-text/70 hover:text-text hover:bg-surface/30'
+                              ? 'bg-text text-bg font-bold scale-105' 
+                              : 'text-text/70 hover:text-text hover:bg-surface'
                           }`}
                         >
-                          <span className="text-[9px] font-extrabold tracking-widest opacity-60 uppercase">{weekdayNames[i]}</span>
-                          <span className="text-xs font-extrabold mt-0.5">{day.getDate()}</span>
+                          <span className="text-[9px] font-bold tracking-widest opacity-60 uppercase">{weekdayNames[i]}</span>
+                          <span className="text-xs font-bold mt-0.5">{day.getDate()}</span>
                           {hasNote && (
-                            <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-bg' : 'bg-primary'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-bg' : 'bg-text'}`} />
                           )}
                         </button>
                       );
                     })}
                   </div>
 
-                  <button onClick={() => shiftWeek(1)} className="p-2 text-dim hover:text-primary hover:bg-surface/30 rounded-xl transition-all cursor-pointer">
+                  <button onClick={() => shiftWeek(1)} className="p-2 text-dim hover:text-text hover:bg-surface border border-transparent hover:border-border rounded-none transition-all cursor-pointer">
                     <ChevronRight size={16} />
                   </button>
                 </div>
               </div>
 
               {/* Habits Checklist Card */}
-              <div className="glass-premium p-6 rounded-[1.75rem] space-y-4 shadow-sm">
+              <div className="card-premium-mono p-6 rounded-none space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-extrabold text-text text-xs uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-teal" /> Habits Checklist
+                  <h3 className="flex items-baseline gap-2 select-none">
+                    <span className="w-1.5 h-1.5 bg-text inline-block self-center shrink-0" />
+                    <span className="font-sans font-black text-[10px] uppercase tracking-[0.2em] text-text">Habits</span>
+                    <span className="font-serif font-light italic text-sm text-dim lowercase">checklist</span>
                   </h3>
                   <button 
                     onClick={() => setIsHabitModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border/35 text-xs text-text font-bold hover:bg-bg/60 rounded-xl hover:scale-[1.02] active:scale-[0.96] transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border text-xs text-text font-medium hover:bg-text hover:text-bg rounded-none transition-all cursor-pointer uppercase tracking-wider"
                   >
-                    <Edit3 size={12} />
+                    <Edit3 size={11} />
                     <span>Edit Template</span>
                   </button>
                 </div>
@@ -801,24 +812,24 @@ export default function FocusScreen() {
                 {userHabits.length === 0 ? (
                   <p className="text-center text-xs text-dim italic py-6">No habits configured. Click "Edit Habits Template" to add habits.</p>
                 ) : (
-                  <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex flex-col gap-2 pt-1 font-sans">
                     {userHabits.map(habit => {
                       const isDone = !!noteContent.habitsState[habit];
                       return (
                         <div
                           key={habit}
                           onClick={() => toggleHabit(habit)}
-                          className="flex items-center gap-3 p-3 bg-bg/25 hover:bg-bg/50 border border-border/20 rounded-2xl cursor-pointer group transition-all duration-200 select-none hover:scale-[1.005] active:scale-[0.99]"
+                          className="flex items-center gap-3 p-3.5 bg-surface border border-border/40 rounded-none cursor-pointer group transition-all duration-200 select-none"
                         >
-                          <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-200 shrink-0 ${
+                          <div className={`w-4 h-4 rounded-none border border-border/80 flex items-center justify-center transition-all duration-200 shrink-0 ${
                             isDone 
-                              ? 'bg-teal border-teal text-bg' 
-                              : 'border-border/60 group-hover:border-teal'
+                              ? 'bg-text border-text text-bg' 
+                              : 'border-border/60 group-hover:border-text bg-transparent'
                           }`}>
-                            {isDone && <Check size={12} strokeWidth={4} />}
+                            {isDone && <Check size={11} strokeWidth={4} />}
                           </div>
-                          <span className={`text-sm font-semibold transition-all duration-200 ${
-                            isDone ? 'text-dim line-through opacity-75' : 'text-text font-bold'
+                          <span className={`text-sm font-medium transition-all duration-200 ${
+                            isDone ? 'text-dim line-through opacity-75' : 'text-text font-semibold'
                           }`}>
                             {habit}
                           </span>
@@ -837,18 +848,23 @@ export default function FocusScreen() {
           {activeTab === 'tasks' && (
             <div className="space-y-6">
               {/* Date navigation bar */}
-              <div className="glass-premium rounded-[1.75rem] p-5 space-y-4 shadow-sm">
+              <div className="card-premium-mono rounded-none p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
-                    <h2 className="text-lg font-extrabold text-text tracking-tight">
-                      {parseLocalDate(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                    <h2 className="tracking-tight leading-none flex items-baseline select-none">
+                      <span className="font-serif font-light italic text-xl md:text-2xl text-text capitalize mr-2">
+                        {parseLocalDate(selectedDate).toLocaleDateString(undefined, { weekday: 'long' })}
+                      </span>
+                      <span className="font-sans font-black text-xs uppercase tracking-[0.15em] text-dim">
+                        {parseLocalDate(selectedDate).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
+                      </span>
                     </h2>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => handleOpenDailyNote(getLocalDateString())}
-                      className="px-3.5 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold hover:bg-primary/25 hover:scale-[1.02] active:scale-[0.96] transition-all cursor-pointer"
+                      className="px-3.5 py-1.5 border border-border text-text rounded-none text-xs font-semibold hover:bg-text hover:text-bg transition-all cursor-pointer uppercase tracking-wider"
                     >
                       Today
                     </button>
@@ -856,18 +872,18 @@ export default function FocusScreen() {
                       type="date"
                       value={selectedDate}
                       onChange={(e) => handleOpenDailyNote(e.target.value)}
-                      className="bg-bg border border-border/35 px-3 py-1.5 rounded-xl text-xs font-semibold text-text focus:outline-none focus:border-primary transition-all cursor-pointer"
+                      className="bg-bg border border-border px-3 py-1.5 rounded-none text-xs font-semibold text-text focus:outline-none focus:border-text transition-all cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* Elegant week navigation strip */}
-                <div className="border-t border-border/10 pt-4 flex items-center justify-between">
-                  <button onClick={() => shiftWeek(-1)} className="p-2 text-dim hover:text-primary hover:bg-surface/30 rounded-xl transition-all cursor-pointer">
+                <div className="border-t border-border/40 pt-4 flex items-center justify-between">
+                  <button onClick={() => shiftWeek(-1)} className="p-2 text-dim hover:text-text hover:bg-surface border border-transparent hover:border-border rounded-none transition-all cursor-pointer">
                     <ChevronLeft size={16} />
                   </button>
 
-                  <div className="flex-grow max-w-lg mx-auto grid grid-cols-7 gap-1">
+                  <div className="flex-grow max-w-lg mx-auto grid grid-cols-7 gap-1 font-sans">
                     {Array.from({ length: 7 }).map((_, i) => {
                       const day = new Date(weekStart);
                       day.setDate(weekStart.getDate() + i);
@@ -880,45 +896,47 @@ export default function FocusScreen() {
                         <button
                           key={i}
                           onClick={() => handleOpenDailyNote(dayStr)}
-                          className={`py-2 rounded-xl flex flex-col items-center justify-center premium-transition hover:scale-[1.04] active:scale-[0.95] ${
+                          className={`py-2 rounded-none flex flex-col items-center justify-center transition-all ${
                             isSelected 
-                              ? 'bg-primary text-bg font-extrabold shadow-sm scale-105' 
-                              : 'text-text/70 hover:text-text hover:bg-surface/30'
+                              ? 'bg-text text-bg font-bold scale-105' 
+                              : 'text-text/70 hover:text-text hover:bg-surface'
                           }`}
                         >
-                          <span className="text-[9px] font-extrabold tracking-widest opacity-60 uppercase">{weekdayNames[i]}</span>
-                          <span className="text-xs font-extrabold mt-0.5">{day.getDate()}</span>
+                          <span className="text-[9px] font-bold tracking-widest opacity-60 uppercase">{weekdayNames[i]}</span>
+                          <span className="text-xs font-bold mt-0.5">{day.getDate()}</span>
                           {hasNote && (
-                            <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-bg' : 'bg-primary'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-bg' : 'bg-text'}`} />
                           )}
                         </button>
                       );
                     })}
                   </div>
 
-                  <button onClick={() => shiftWeek(1)} className="p-2 text-dim hover:text-primary hover:bg-surface/30 rounded-xl transition-all cursor-pointer">
+                  <button onClick={() => shiftWeek(1)} className="p-2 text-dim hover:text-text hover:bg-surface border border-transparent hover:border-border rounded-none transition-all cursor-pointer">
                     <ChevronRight size={16} />
                   </button>
                 </div>
               </div>
 
               {/* Tasks Checklist Card */}
-              <div className="glass-premium p-6 rounded-[1.75rem] space-y-4 shadow-sm">
-                <h3 className="font-extrabold text-text text-xs uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue" /> Tasks Checklist
-                </h3>
+              <div className="card-premium-mono p-6 rounded-none space-y-4">
+                 <h3 className="flex items-baseline gap-2 select-none">
+                    <span className="w-1.5 h-1.5 bg-text inline-block self-center shrink-0" />
+                    <span className="font-sans font-black text-[10px] uppercase tracking-[0.2em] text-text">Tasks</span>
+                    <span className="font-serif font-light italic text-sm text-dim lowercase">checklist</span>
+                  </h3>
 
-                <div className="space-y-1 pr-1 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1 pr-1 max-h-[300px] overflow-y-auto font-sans">
                   {noteContent.tasks.length === 0 ? (
                     <p className="text-center text-xs text-dim italic py-6">No tasks added today.</p>
                   ) : (
                     noteContent.tasks.map((task, idx) => (
                       <div key={idx} className="group flex items-center justify-between gap-3 py-2 border-b border-border/5">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <button onClick={() => toggleTask(idx)} className="text-text/60 hover:text-primary shrink-0 transition-colors">
+                          <button onClick={() => toggleTask(idx)} className="text-text/60 hover:text-text shrink-0 transition-colors">
                             {task.completed 
-                              ? <CheckSquare size={16} className="text-primary" /> 
-                              : <Square size={16} className="text-text/40" />
+                              ? <CheckSquare size={15} className="text-text" /> 
+                              : <Square size={15} className="text-text/40" />
                             }
                           </button>
                           <input 
@@ -946,7 +964,7 @@ export default function FocusScreen() {
                     addTask(input.value);
                     input.value = '';
                   }}
-                  className="flex items-center gap-2 bg-bg/50 border border-border/35 p-1.5 rounded-xl focus-within:border-primary/50 premium-transition"
+                  className="flex items-center gap-2 bg-bg border border-border p-1.5 rounded-none focus-within:border-text transition-colors font-sans"
                 >
                   <input 
                     name="newTask"
@@ -954,7 +972,7 @@ export default function FocusScreen() {
                     placeholder="Add task to your checklist..."
                     className="flex-1 bg-transparent px-3 text-xs font-semibold focus:outline-none text-text placeholder-text/30"
                   />
-                  <button type="submit" className="p-2 bg-primary text-bg rounded-lg hover:scale-105 active:scale-95 premium-transition cursor-pointer flex items-center justify-center">
+                  <button type="submit" className="p-2 btn-premium-mono rounded-none cursor-pointer flex items-center justify-center">
                     <Plus size={12} />
                   </button>
                 </form>
@@ -1034,14 +1052,16 @@ export default function FocusScreen() {
               </div>
 
               {/* Journal Card */}
-              <div className="glass-premium p-6 rounded-[1.75rem] flex flex-col min-h-[350px] space-y-4 shadow-sm">
+              <div className="card-premium-mono p-6 rounded-none flex flex-col min-h-[350px] space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-text text-xs uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-peach" /> Journal Space
+                  <h3 className="flex items-baseline gap-2 select-none">
+                    <span className="w-1.5 h-1.5 bg-text inline-block self-center shrink-0" />
+                    <span className="font-sans font-black text-[10px] uppercase tracking-[0.2em] text-text">Journal</span>
+                    <span className="font-serif font-light italic text-sm text-dim lowercase">space</span>
                   </h3>
 
-                  <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'Synced' ? 'bg-green' : 'bg-gold animate-pulse'}`} />
+                  <div className="flex items-center gap-2 select-none font-sans">
+                    <span className={`w-1.5 h-1.5 bg-text ${saveStatus === 'Synced' ? 'opacity-100' : 'opacity-40 animate-pulse'}`} />
                     <span className="text-[8px] text-dim font-bold uppercase tracking-wider">{saveStatus}</span>
                   </div>
                 </div>

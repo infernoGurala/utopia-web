@@ -9,14 +9,15 @@ import ProfileScreen from './screens/ProfileScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
 import ClassNotesScreen from './screens/ClassNotesScreen';
 import FocusScreen from './screens/FocusScreen';
+import UtopiaLoader from './components/UtopiaLoader';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-bg select-none">
+        <UtopiaLoader />
       </div>
     );
   }
