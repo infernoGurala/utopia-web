@@ -9,6 +9,8 @@ import ProfileScreen from './screens/ProfileScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
 import ClassNotesScreen from './screens/ClassNotesScreen';
 import FocusScreen from './screens/FocusScreen';
+import HabitsScreen from './screens/HabitsScreen';
+import CalendarScreen from './screens/CalendarScreen';
 import UtopiaLoader from './components/UtopiaLoader';
 
 function ProtectedRoute({ children }) {
@@ -51,6 +53,8 @@ function App() {
               <Route path="notes" element={<NotesScreen />} />
               <Route path="class-notes" element={<ClassNotesScreen />} />
               <Route path="attendance" element={<AttendanceScreen />} />
+              <Route path="habits" element={<HabitsScreen />} />
+              <Route path="calendar" element={<CalendarScreen />} />
               <Route path="profile" element={<ProfileScreen />} />
               <Route path="note" element={<NoteEditorScreen />} />
               <Route path="focus" element={<FocusScreen />} />

@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { focusService, initFocusSupabase } from '../services/focusService';
+import { focusService, initFocusSupabase, rocketService, getRocketCredentials } from '../services/focusService';
 import UtopiaLoader from '../components/UtopiaLoader';
 import { 
   Sparkles, Flame, Calendar, Bell, BarChart2, Plus, Trash2, Edit3, Check, 
   Square, CheckSquare, Search, ChevronLeft, ChevronRight, Info, 
   Clock, ArrowLeft, CalendarDays, BookOpen, X, Sliders, RefreshCw, AlertCircle,
-  Home
+  Home, Rocket, Volume2, Play, Pause, SkipForward, SkipBack,
+  RotateCcw, Maximize2, Minimize2
 } from 'lucide-react';
 
 const SUGGESTED_HABITS = [
@@ -73,10 +74,11 @@ const getWeekStart = (d) => {
 
 export default function FocusScreen() {
   const { user } = useAuth();
+  const currentUserId = user?.uid || new URLSearchParams(window.location.search).get('userId') || '';
   const { currentThemeId } = useTheme();
   
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState('habits'); // habits, tasks, journal, alarms, analytics
+  const [activeTab, setActiveTab] = useState('rockets'); // habits, tasks, journal, alarms, analytics, rockets
   const [focusedBubble, setFocusedBubble] = useState(null); // null, journal, alarms, analytics
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState('Synced'); // Synced, Saving, Error
@@ -126,9 +128,68 @@ export default function FocusScreen() {
   const [heatmapStats, setHeatmapStats] = useState({ currentStreak: 0, longestStreak: 0, totalDone: 0, thisMonth: 0 });
   const [selectedCellInfo, setSelectedCellInfo] = useState(null);
 
-  // ----------------------------------------------------
-  // Initial Setup & Time Slots
-  // ----------------------------------------------------
+  // Rockets Feature states
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  const [rockets, setRockets] = useState([]);
+  const [rocketsView, setRocketsView] = useState('list'); // list, create, player
+  const [selectedRocket, setSelectedRocket] = useState(null);
+  const [rocketForm, setRocketForm] = useState({ title: '', rawText: '', voice: 'af_bella', speed: 1.0 });
+  const [rocketGenerating, setRocketGenerating] = useState(false);
+  const [rocketProgress, setRocketProgress] = useState({ current: 0, total: 0 });
+  const [rocketErrorMessage, setRocketErrorMessage] = useState('');
+
+  // Rockets Player states
+  const [rocketPlayerState, setRocketPlayerState] = useState({
+    playing: false,
+    currentSlide: 0,
+    speed: 1.0,
+    highlightMode: true,
+    isDarkStage: false,
+    activeWordIndex: -1,
+  });
+  const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Refs for tracking active audio playback, timings, and sync loops
+  const activeAudioRef = useRef(null);
+  const syncLoopIdRef = useRef(null);
+  const activeTimedTokensRef = useRef([]);
+  const currentSlideRef = useRef(0);
+  const focusModeRef = useRef(null);
+  // Fullscreen API helpers for Focus Mode
+  const enterFocusMode = () => {
+    setIsFocusMode(true);
+    // Brief timeout lets React render the overlay div before we request fullscreen on it
+    setTimeout(() => {
+      const el = focusModeRef.current || document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }, 50);
+  };
+
+  const exitFocusMode = () => {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+    setIsFocusMode(false);
+  };
+
+  // Sync isFocusMode when user exits fullscreen via Escape or browser UI
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        setIsFocusMode(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+  }, []);
+
   useEffect(() => {
     const now = new Date();
     const hr = now.getHours() + now.getMinutes() / 60;
@@ -168,16 +229,47 @@ export default function FocusScreen() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    const userIdParam = params.get('userId');
+    const tabParam = params.get('tab');
+    const embeddedParam = params.get('embedded') === 'true';
+    const rocketIdParam = params.get('rocketId');
+
+    if (!user && !userIdParam) return;
 
     const initialize = async () => {
       setLoading(true);
       try {
         await initFocusSupabase();
-        const habits = await focusService.getUserHabits(user.uid);
-        setUserHabits(habits);
-        await loadDashboardData();
-        await handleOpenDailyNote(getLocalDateString());
+        
+        setIsEmbedded(embeddedParam);
+
+        if (tabParam === 'rockets') {
+          setActiveTab('rockets');
+          const allRockets = await rocketService.getRockets(user?.uid || userIdParam);
+          setRockets(allRockets);
+          
+          if (embeddedParam && rocketIdParam) {
+            const target = allRockets.find(r => r.id === rocketIdParam);
+            if (target) {
+              setSelectedRocket(target);
+              setRocketsView('player');
+              setTimeout(() => playSlide(0), 100);
+            } else {
+              setRocketsView('list');
+              setSelectedRocket(null);
+            }
+          } else {
+            setRocketsView('list');
+            setSelectedRocket(null);
+          }
+        } else if (user) {
+          const allRockets = await rocketService.getRockets(user.uid);
+          setActiveTab('rockets');
+          setRockets(allRockets);
+          setRocketsView('list');
+          setSelectedRocket(null);
+        }
       } catch (e) {
         console.error('Focus screen initialization error:', e);
       } finally {
@@ -187,6 +279,37 @@ export default function FocusScreen() {
 
     initialize();
   }, [user]);
+
+  // Polling effect to update "Generating" rockets list when completed on the server
+  useEffect(() => {
+    if (activeTab !== 'rockets' || !currentUserId) return;
+
+    // Check if there are any rockets that are currently in "generating" (placeholder) state
+    const hasGeneratingRockets = rockets.some(
+      r => !r.supabase_audio_urls || r.supabase_audio_urls.length === 0
+    );
+    if (!hasGeneratingRockets) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const allRockets = await rocketService.getRockets(currentUserId);
+        
+        // Find if any previously generating rocket has now finished
+        const anyFinished = allRockets.some(
+          ar => ar.supabase_audio_urls && ar.supabase_audio_urls.length > 0 &&
+                rockets.some(r => r.id === ar.id && (!r.supabase_audio_urls || r.supabase_audio_urls.length === 0))
+        );
+
+        if (anyFinished) {
+          setRockets(allRockets);
+        }
+      } catch (e) {
+        console.warn("Silent background rocket status poll failed:", e);
+      }
+    }, 4000); // Check every 4 seconds for fast response!
+
+    return () => clearInterval(interval);
+  }, [activeTab, rockets, currentUserId]);
 
   // ----------------------------------------------------
   // Statistics Sync & Load
@@ -345,6 +468,395 @@ export default function FocusScreen() {
       setLoading(false);
     }
   };
+
+  const handleOpenRockets = async () => {
+    setActiveTab('rockets');
+    setRocketsView('list');
+    setSelectedRocket(null);
+    setLoading(true);
+    try {
+      await initFocusSupabase();
+      const allRockets = await rocketService.getRockets(currentUserId);
+      setRockets(allRockets);
+    } catch (e) {
+      console.warn('Error fetching rockets:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ----------------------------------------------------
+  // Rockets Feature Helpers & Playback Engine
+  // ----------------------------------------------------
+
+  const STOP_WORDS = new Set(['a','an','the','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','it','its','this','that','these','those','i','we','you','he','she','they','me','us','him','her','them','my','our','your','his','their','what','which','who','whom','whose','when','where','why','how','all','both','each','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','just','but','and','or','for','of','to','in','on','at','by','as','with','from','up','about','into','through','during','before','after','above','below','between','out','off','over','under','then','once','here','there','any','also','if','although','because','since','while','though']);
+
+  const getKeyScore = (w) => {
+    const c = w.toLowerCase().replace(/[^a-z]/g,'');
+    if (c.length <= 2 || STOP_WORDS.has(c)) return 0;
+    if (c.length >= 8) return 3;
+    if (c.length >= 5) return 2;
+    return 1;
+  };
+
+  const classifyWord = (word, lineWords, idx) => {
+    const w = word.toLowerCase().replace(/[^a-z]/g,'');
+    if (w.length <= 2 || STOP_WORDS.has(w)) return 'w-plain';
+    if (idx > 0 && word[0] === word[0].toUpperCase() && /[A-Z]/.test(word[0])) return 'w-term';
+    const scored = lineWords.map((lw, i) => ({ i, s: getKeyScore(lw) })).filter(x => x.s > 0);
+    if (!scored.length) return 'w-plain';
+    scored.sort((a, b) => b.s - a.s);
+    const topN = Math.max(1, Math.ceil(scored.length * 0.35));
+    const topIdx = new Set(scored.slice(0, topN).map(x => x.i));
+    if (topIdx.has(idx)) return getKeyScore(word) >= 3 ? 'w-key' : 'w-strong';
+    return 'w-plain';
+  };
+
+  const parseText = (raw) => {
+    if (!raw) return [];
+    const result = [];
+    raw.split(/\n+/).map(l => l.trim()).filter(l => l.length > 1).forEach(line => {
+      line.split(/(?<=[.!?])\s+/).forEach(s => {
+        const t = s.trim().replace(/\s+/g, ' ');
+        if (t.length > 1) result.push(t);
+      });
+    });
+    return result;
+  };
+
+  const prepareWordTokens = (text, groqStyles) => {
+    if (!text) return [];
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+    const tokens = [];
+    let searchIndex = 0;
+
+    words.forEach((w, i) => {
+      let idx = text.indexOf(w, searchIndex);
+      if (idx === -1) {
+        idx = text.toLowerCase().indexOf(w.toLowerCase(), searchIndex);
+      }
+      if (idx === -1) {
+        idx = searchIndex;
+      }
+
+      let className = 'w-plain';
+      if (groqStyles) {
+        const normalized = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (groqStyles[normalized]) {
+          className = groqStyles[normalized];
+        } else {
+          className = classifyWord(w, words, i);
+        }
+      } else {
+        className = classifyWord(w, words, i);
+      }
+
+      tokens.push({
+        word: w,
+        startIndex: idx,
+        endIndex: idx + w.length,
+        className: className
+      });
+
+      searchIndex = idx + w.length;
+    });
+
+    return tokens;
+  };
+
+  const handleDeleteRocket = async (rocketId) => {
+    if (!window.confirm('Are you sure you want to delete this Rocket?')) return;
+    try {
+      await rocketService.deleteRocket(currentUserId, rocketId);
+      setRockets(prev => prev.filter(r => r.id !== rocketId));
+    } catch (e) {
+      console.warn('Failed to delete rocket:', e);
+    }
+  };
+
+  const handleCreateRocket = async (e) => {
+    e.preventDefault();
+    if (!rocketForm.title.trim() || !rocketForm.rawText.trim()) {
+      setRocketErrorMessage('Please fill in both the title and text fields.');
+      return;
+    }
+
+    setRocketGenerating(true);
+    setRocketErrorMessage('');
+    const slides = parseText(rocketForm.rawText);
+    if (slides.length === 0) {
+      setRocketErrorMessage('Could not find any readable sentences in the text.');
+      setRocketGenerating(false);
+      return;
+    }
+
+    const rocketId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+
+    try {
+      const { clSecrets, supabaseCfg } = await getRocketCredentials();
+      if (!supabaseCfg) {
+        throw new Error('Supabase configurations missing. Please run migrations first.');
+      }
+
+      // 1. Immediately save a placeholder / in-progress record to the Supabase database
+      const placeholderRocket = {
+        id: rocketId,
+        title: rocketForm.title.trim(),
+        raw_text: rocketForm.rawText.trim(),
+        voice: rocketForm.voice,
+        speed: rocketForm.speed,
+        timings: [],
+        groq_styles: [],
+        supabase_audio_urls: [],
+        cloudinary_audio_urls: []
+      };
+
+      await rocketService.saveRocket(currentUserId, placeholderRocket);
+
+      const BASE = 'https://infernoGurala-rocket-tts.hf.space';
+
+      // 2. Trigger asynchronous background generation on the server
+      const res = await fetch(`${BASE}/api/rockets/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: rocketForm.title.trim(),
+          raw_text: rocketForm.rawText.trim(),
+          voice: rocketForm.voice,
+          speed: rocketForm.speed,
+          user_id: currentUserId,
+          rocket_id: rocketId,
+          supabase_url: supabaseCfg.url,
+          supabase_anon_key: supabaseCfg.anon_key,
+          cloudinary_cloud_name: clSecrets?.cloudName || '',
+          cloudinary_api_key: clSecrets?.apiKey || '',
+          cloudinary_api_secret: clSecrets?.apiSecret || ''
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('Server returned an error starting speech synthesis.');
+      }
+
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Reset form and go back to list immediately
+      setRocketForm({ title: '', rawText: '', voice: 'af_bella', speed: 1.0 });
+      setRocketsView('list');
+
+      // Refresh list to display the newly added placeholder
+      const allRockets = await rocketService.getRockets(currentUserId);
+      setRockets(allRockets);
+    } catch (err) {
+      console.error(err);
+      setRocketErrorMessage(err.message || 'An unexpected error occurred during synthesis.');
+    } finally {
+      setRocketGenerating(false);
+    }
+  };
+
+  const playSlide = (slideIndex) => {
+    currentSlideRef.current = slideIndex;
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if (syncLoopIdRef.current) {
+      cancelAnimationFrame(syncLoopIdRef.current);
+      syncLoopIdRef.current = null;
+    }
+
+    if (!selectedRocket) return;
+    const slides = parseText(selectedRocket.raw_text);
+    if (slideIndex < 0 || slideIndex >= slides.length) return;
+
+    const audioUrl = selectedRocket.supabase_audio_urls[slideIndex] || selectedRocket.cloudinary_audio_urls[slideIndex];
+    if (!audioUrl) {
+      console.warn("No audio URL found for slide", slideIndex);
+      return;
+    }
+
+    const slideText = slides[slideIndex];
+    const tokens = prepareWordTokens(slideText, selectedRocket.groq_styles[slideIndex]);
+    const slideTimings = selectedRocket.timings[slideIndex] || [];
+    const timedTokens = tokens.map((t, idx) => {
+      const alignment = slideTimings[idx] || { start: 0, end: 0 };
+      return {
+        ...t,
+        startTime: alignment.start,
+        endTime: alignment.end
+      };
+    });
+
+    activeTimedTokensRef.current = timedTokens;
+    setPlaybackProgress(0);
+
+    const audio = new Audio(audioUrl);
+    
+    // Explicitly enforce playbackRate settings across multiple lifecycle hooks to prevent WebView reset bugs
+    audio.playbackRate = rocketPlayerState.speed;
+    audio.defaultPlaybackRate = rocketPlayerState.speed;
+    audio.addEventListener('loadedmetadata', () => {
+      audio.playbackRate = rocketPlayerState.speed;
+    });
+    audio.addEventListener('play', () => {
+      audio.playbackRate = rocketPlayerState.speed;
+    });
+
+    activeAudioRef.current = audio;
+
+    audio.play().then(() => {
+      audio.playbackRate = rocketPlayerState.speed;
+      setRocketPlayerState(prev => ({
+        ...prev,
+        playing: true,
+        currentSlide: slideIndex,
+        activeWordIndex: -1
+      }));
+      startSyncLoop();
+    }).catch(e => {
+      console.warn('Playback failed:', e);
+    });
+  };
+
+  const startSyncLoop = () => {
+    if (syncLoopIdRef.current) {
+      cancelAnimationFrame(syncLoopIdRef.current);
+    }
+
+    const update = () => {
+      const audio = activeAudioRef.current;
+      if (!audio) return;
+
+      if (audio.paused || audio.ended) {
+        if (audio.ended) {
+          handleSlideEnded();
+          return;
+        }
+      }
+
+      const elapsedMs = audio.currentTime * 1000;
+      setPlaybackProgress((audio.currentTime / (audio.duration || 1)) * 100);
+      highlightWordAtTime(elapsedMs);
+      syncLoopIdRef.current = requestAnimationFrame(update);
+    };
+
+    syncLoopIdRef.current = requestAnimationFrame(update);
+  };
+
+  const highlightWordAtTime = (elapsedMs) => {
+    const timedTokens = activeTimedTokensRef.current;
+    if (!timedTokens || timedTokens.length === 0) return;
+
+    let activeIdx = -1;
+    for (let i = 0; i < timedTokens.length; i++) {
+      const token = timedTokens[i];
+      if (elapsedMs >= token.startTime && elapsedMs < token.endTime) {
+        activeIdx = i;
+        break;
+      }
+    }
+
+    setRocketPlayerState(prev => {
+      if (prev.activeWordIndex !== activeIdx) {
+        return { ...prev, activeWordIndex: activeIdx };
+      }
+      return prev;
+    });
+  };
+
+  const handleSlideEnded = () => {
+    if (syncLoopIdRef.current) {
+      cancelAnimationFrame(syncLoopIdRef.current);
+    }
+    const nextSlide = currentSlideRef.current + 1;
+    const slides = parseText(selectedRocket.raw_text);
+    if (nextSlide < slides.length) {
+      playSlide(nextSlide);
+    } else {
+      setRocketPlayerState(prev => ({ ...prev, playing: false, activeWordIndex: -1 }));
+      activeAudioRef.current = null;
+    }
+  };
+
+  const handlePlayPause = () => {
+    const audio = activeAudioRef.current;
+    if (audio) {
+      if (audio.paused) {
+        audio.play().then(() => {
+          audio.playbackRate = rocketPlayerState.speed;
+          setRocketPlayerState(prev => ({ ...prev, playing: true }));
+          startSyncLoop();
+        }).catch(e => console.warn(e));
+      } else {
+        audio.pause();
+        if (syncLoopIdRef.current) {
+          cancelAnimationFrame(syncLoopIdRef.current);
+        }
+        setRocketPlayerState(prev => ({ ...prev, playing: false }));
+      }
+    } else {
+      playSlide(rocketPlayerState.currentSlide);
+    }
+  };
+
+  const handlePrevSlide = () => {
+    if (rocketPlayerState.currentSlide > 0) {
+      playSlide(rocketPlayerState.currentSlide - 1);
+    }
+  };
+
+  const handleNextSlide = () => {
+    if (!selectedRocket) return;
+    const slides = parseText(selectedRocket.raw_text);
+    if (rocketPlayerState.currentSlide < slides.length - 1) {
+      playSlide(rocketPlayerState.currentSlide + 1);
+    }
+  };
+
+  const handleWordClick = (wordIdx) => {
+    const audio = activeAudioRef.current;
+    const tokens = activeTimedTokensRef.current;
+    if (audio && tokens && tokens[wordIdx]) {
+      const targetTime = tokens[wordIdx].startTime / 1000;
+      audio.currentTime = targetTime;
+      setRocketPlayerState(prev => ({ ...prev, activeWordIndex: wordIdx }));
+    }
+  };
+
+  const handleSpeedChange = (newSpeed) => {
+    setRocketPlayerState(prev => ({ ...prev, speed: newSpeed }));
+    if (activeAudioRef.current) {
+      activeAudioRef.current.playbackRate = newSpeed;
+    }
+  };
+
+  const handleClosePlayer = () => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if (syncLoopIdRef.current) {
+      cancelAnimationFrame(syncLoopIdRef.current);
+      syncLoopIdRef.current = null;
+    }
+    setRocketPlayerState({
+      playing: false,
+      currentSlide: 0,
+      speed: 1.0,
+      highlightMode: true,
+      isDarkStage: false,
+      activeWordIndex: -1
+    });
+    setSelectedRocket(null);
+    setRocketsView('list');
+  };
+
 
   const handleOpenAnalytics = async () => {
     setActiveTab('analytics');
@@ -661,52 +1173,159 @@ export default function FocusScreen() {
     return true;
   });
   const activeSlotStyle = SLOT_STYLES[timeSlot];
+  
+  if (isEmbedded) {
+    return (
+      <div className="w-full min-h-screen bg-[#242424] flex flex-col justify-center animate-fadeIn select-none">
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <UtopiaLoader />
+          </div>
+        ) : activeTab === 'rockets' && selectedRocket && (
+          <div className="flex flex-col w-full h-full flex-grow">
+            {/* Elegant Stage Screen */}
+            <div className="overflow-hidden flex flex-col flex-grow w-full h-full">
+              
+              {/* Stage Container */}
+              <div 
+                id="stage" 
+                className={`relative min-h-[300px] p-6 sm:p-12 flex flex-col justify-center transition-colors duration-300 flex-grow w-full ${
+                  rocketPlayerState.isDarkStage ? 'dark-stage' : 'bg-[#f2ede4]'
+                } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
+              >
+                {/* Prev Line */}
+                <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
+                  {rocketPlayerState.currentSlide > 0 
+                    ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
+                    : ''
+                  }
+                </div>
+
+                {/* Current Line Word Tokens */}
+                <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
+                  {(() => {
+                    const slides = parseText(selectedRocket.raw_text);
+                    const text = slides[rocketPlayerState.currentSlide] || '';
+                    const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                    
+                    return tokens.map((token, i) => {
+                      const isActive = rocketPlayerState.activeWordIndex === i;
+                      return (
+                        <Fragment key={i}>
+                          <span 
+                            onClick={() => handleWordClick(i)}
+                            className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                          >
+                            {token.word}
+                          </span>
+                          {' '}
+                        </Fragment>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Progress Bar Wrapper */}
+              <div id="progress-bar-wrap" className="h-1 bg-[#333] w-full overflow-hidden select-none">
+                <div 
+                  id="progress-bar" 
+                  className="h-full bg-[#c8622a] transition-all duration-100"
+                  style={{
+                    width: `${playbackProgress}%`
+                  }}
+                />
+              </div>
+
+              {/* Mobile & Desktop Responsive Controls Panel */}
+              <div className="bg-[#222] border-t border-[#333] p-4 flex flex-col md:flex-row justify-between items-center gap-4 select-none font-sans text-xs text-[#e8e0d4]">
+                {/* Left: Nav and Play Controls */}
+                <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={handlePrevSlide}
+                      disabled={rocketPlayerState.currentSlide === 0}
+                      className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                    >
+                      <SkipBack size={14} />
+                    </button>
+                    
+                    <button 
+                      onClick={handlePlayPause}
+                      className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold cursor-pointer"
+                    >
+                      {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
+                    </button>
+
+                    <button 
+                      onClick={handleNextSlide}
+                      disabled={rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
+                      className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                    >
+                      <SkipForward size={14} />
+                    </button>
+                  </div>
+
+                  {/* Slide Counter */}
+                  <span className="text-[#888] font-mono font-semibold">
+                    {rocketPlayerState.currentSlide + 1} / {parseText(selectedRocket.raw_text).length}
+                  </span>
+                </div>
+
+                {/* Right: Stage Controls, Speeds, and Options */}
+                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  {/* Speed select */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#888] font-bold uppercase tracking-wider text-[10px]">Speed</span>
+                    <select 
+                      value={rocketPlayerState.speed.toString()}
+                      onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
+                      className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="0.75">0.75x</option>
+                      <option value="0.9">0.9x</option>
+                      <option value="1">1.0x</option>
+                      <option value="1.15">1.15x</option>
+                      <option value="1.3">1.3x</option>
+                      <option value="1.5">1.5x</option>
+                    </select>
+                  </div>
+
+                  {/* Highlight mode */}
+                  <button 
+                    onClick={() => setRocketPlayerState(prev => ({ ...prev, highlightMode: !prev.highlightMode }))}
+                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                      rocketPlayerState.highlightMode 
+                        ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
+                        : 'bg-[#2a2a2a] hover:bg-[#333]'
+                    }`}
+                  >
+                    Box Highlight
+                  </button>
+
+                  {/* Dark stage */}
+                  <button 
+                    onClick={() => setRocketPlayerState(prev => ({ ...prev, isDarkStage: !prev.isDarkStage }))}
+                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                      rocketPlayerState.isDarkStage 
+                        ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
+                        : 'bg-[#2a2a2a] hover:bg-[#333]'
+                    }`}
+                  >
+                    Dark Stage
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20 animate-fadeIn">
-      {/* Dynamic Header */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
-            <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-2">Focus</span>
-            <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">& routine</span>
-          </h1>
-          <p className="text-dim text-xs font-serif italic">Productive space to think and grow.</p>
-        </div>
-      </div>
 
-      {/* Clean segmented tab selector */}
-      <div className="flex bg-surface border border-border p-0.5 rounded-none max-w-lg mb-8 overflow-x-auto hide-scrollbar select-none font-sans">
-        {[
-          { id: 'habits', label: 'Habits' },
-          { id: 'tasks', label: 'Tasks' },
-          { id: 'journal', label: 'Journal' },
-          { id: 'alarms', label: 'Alarms' },
-          { id: 'analytics', label: 'Analytics' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id);
-              if (tab.id === 'journal') {
-                handleOpenDailyNote(selectedDate);
-              } else if (tab.id === 'alarms') {
-                handleOpenReminders();
-              } else if (tab.id === 'analytics') {
-                handleOpenAnalytics();
-              } else if (tab.id === 'habits' || tab.id === 'tasks') {
-                handleOpenDailyNote(selectedDate);
-              }
-            }}
-            className={`flex-grow py-2.5 px-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-colors cursor-pointer text-center whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-text text-bg'
-                : 'text-sub hover:text-text'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
       {/* Main Content Area */}
       {loading ? (
@@ -1340,6 +1959,541 @@ export default function FocusScreen() {
               )}
             </div>
           )}
+
+          {/* ========================================================================= */}
+          {/* TAB: ROCKETS                                                              */}
+          {/* ========================================================================= */}
+          {activeTab === 'rockets' && (
+            <div className="space-y-6">
+              {/* Rockets List View */}
+              {rocketsView === 'list' && (
+                <div className="space-y-6">
+                  {/* Banner / Header */}
+                  <div className="card-premium-mono rounded-none p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                      <h2 className="tracking-tight leading-none flex items-baseline select-none">
+                        <span className="font-serif font-light italic text-xl md:text-2xl text-text capitalize mr-2">
+                          Saved Rockets
+                        </span>
+                        <span className="font-sans font-black text-xs uppercase tracking-[0.15em] text-dim">
+                          reading sessions
+                        </span>
+                      </h2>
+                      <p className="text-dim text-[11px] font-sans mt-1">Elegantly sync texts with neural TTS audio for high-focus reading.</p>
+                    </div>
+
+                    <button 
+                      onClick={() => setRocketsView('create')}
+                      className="px-3.5 py-1.5 bg-text text-bg rounded-none text-xs font-semibold hover:bg-transparent hover:text-text border border-text transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                    >
+                      <Plus size={13} /> New Rocket
+                    </button>
+                  </div>
+
+                  {/* Rockets Grid */}
+                  {rockets.length === 0 ? (
+                    <div className="card-premium-mono rounded-none p-12 text-center space-y-4">
+                      <Rocket size={32} className="mx-auto text-dim/60" />
+                      <p className="text-xs text-dim italic">No rockets created yet. Paste some text and launch a new Rocket session!</p>
+                      <button 
+                        onClick={() => setRocketsView('create')}
+                        className="px-4 py-2 border border-border text-xs font-semibold hover:bg-text hover:text-bg transition-all uppercase tracking-wider cursor-pointer"
+                      >
+                        Create Your First Rocket
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {rockets.map((rocket) => {
+                        const wordCount = rocket.raw_text ? rocket.raw_text.split(/\s+/).length : 0;
+                        const dateStr = rocket.created_at ? new Date(rocket.created_at).toLocaleDateString() : '';
+                        const isGenerating = !rocket.supabase_audio_urls || rocket.supabase_audio_urls.length === 0;
+                        
+                        return (
+                          <div 
+                            key={rocket.id}
+                            onClick={() => {
+                              if (isGenerating) return;
+                              setSelectedRocket(rocket);
+                              setRocketsView('player');
+                              setTimeout(() => playSlide(0), 100);
+                            }}
+                            className={`card-premium-mono rounded-none p-5 flex flex-col justify-between group transition-all ${isGenerating ? 'opacity-60 cursor-not-allowed select-none' : 'cursor-pointer'}`}
+                          >
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start gap-2">
+                                <h3 className="text-text font-serif font-bold italic text-base leading-snug truncate group-hover:text-primary transition-colors flex items-center gap-2">
+                                  {rocket.title}
+                                  {isGenerating && (
+                                    <span className="inline-flex items-center text-[9px] text-[#c8622a] border border-[#c8622a]/30 uppercase tracking-widest font-sans font-bold bg-[#c8622a]/10 px-1.5 py-0.5 animate-pulse rounded-none">
+                                      Generating...
+                                    </span>
+                                  )}
+                                </h3>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteRocket(rocket.id);
+                                  }}
+                                  className="text-dim hover:text-red p-1 transition-colors rounded-none cursor-pointer"
+                                  title="Delete Rocket"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                              <p className="text-xs text-dim line-clamp-3 font-sans font-medium">
+                                {rocket.raw_text}
+                              </p>
+                            </div>
+
+                            <div className="border-t border-border/10 pt-4 mt-4 flex items-center justify-between text-[10px] text-dim font-bold uppercase tracking-wider">
+                              <div className="flex items-center gap-3">
+                                <span>{wordCount} words</span>
+                                <span>•</span>
+                                <span className="lowercase">{rocket.voice.replace('af_', '').replace('am_', '').replace('bf_', '').replace('bm_', '')} ({rocket.speed}x)</span>
+                              </div>
+                              {isGenerating ? (
+                                <span className="animate-pulse text-[#c8622a] lowercase tracking-wider font-bold">synthesizing speech...</span>
+                              ) : (
+                                <span>{dateStr}</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Create Rocket View */}
+              {rocketsView === 'create' && (
+                <div className="space-y-6">
+                  {/* Back to List */}
+                  <button 
+                    onClick={() => {
+                      setRocketsView('list');
+                      setRocketErrorMessage('');
+                    }}
+                    className="flex items-center gap-1.5 text-xs text-dim hover:text-text uppercase tracking-wider font-bold cursor-pointer"
+                  >
+                    <ArrowLeft size={13} /> Back to Rockets
+                  </button>
+
+                  <div className="card-premium-mono rounded-none p-6 space-y-6">
+                    <div>
+                      <h2 className="text-lg font-serif font-bold italic text-text select-none">
+                        Launch a new Rocket
+                      </h2>
+                      <p className="text-xs text-dim font-sans mt-0.5">Define your reading materials, voice styles, and generate an interactive reader.</p>
+                    </div>
+
+                    {rocketErrorMessage && (
+                      <div className="p-4 bg-red/10 border border-red/20 text-red text-xs rounded-none flex items-start gap-2 animate-fadeIn">
+                        <AlertCircle size={14} className="mt-0.5" />
+                        <span>{rocketErrorMessage}</span>
+                      </div>
+                    )}
+
+                    {rocketGenerating ? (
+                      <div className="py-8 text-center space-y-4 font-sans animate-fadeIn select-none">
+                        <div className="flex justify-center items-center py-6">
+                          <UtopiaLoader />
+                        </div>
+                        <div className="max-w-xs mx-auto space-y-2">
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-text">Generating TTS Audio...</h4>
+                          <p className="text-dim text-[11px]">
+                            Sentence {rocketProgress.current} of {rocketProgress.total} (
+                            {Math.round((rocketProgress.current / rocketProgress.total) * 100)}%)
+                          </p>
+                          
+                          {/* Beautiful Progress Bar */}
+                          <div className="h-1.5 w-full bg-surface border border-border/20 rounded-none overflow-hidden mt-2">
+                            <div 
+                              className="h-full bg-[#c8622a] transition-all duration-300"
+                              style={{ width: `${(rocketProgress.current / rocketProgress.total) * 100}%` }}
+                            />
+                          </div>
+                          
+                          <p className="text-dim/80 text-[10px] italic mt-1">Please keep this tab open while generating. This processes speech synthesis and fetches highlights.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleCreateRocket} className="space-y-5 font-sans">
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Session Title</label>
+                          <input 
+                            type="text"
+                            placeholder="e.g. The Art of War - Chapter 1"
+                            value={rocketForm.title}
+                            onChange={(e) => setRocketForm({ ...rocketForm, title: e.target.value })}
+                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text placeholder-text/30"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Text to Read</label>
+                          <textarea 
+                            rows={8}
+                            placeholder="Paste your essay, book excerpt, or goals here..."
+                            value={rocketForm.rawText}
+                            onChange={(e) => setRocketForm({ ...rocketForm, rawText: e.target.value })}
+                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-medium text-text placeholder-text/30 leading-relaxed"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Neural Voice</label>
+                            <select
+                              value={rocketForm.voice}
+                              onChange={(e) => setRocketForm({ ...rocketForm, voice: e.target.value })}
+                              className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer"
+                            >
+                              <option value="af_bella">Bella (US Female - Soft)</option>
+                              <option value="af_sarah">Sarah (US Female - Bright)</option>
+                              <option value="am_adam">Adam (US Male - Deep)</option>
+                              <option value="bf_emma">Emma (UK Female - Clear)</option>
+                              <option value="bm_george">George (UK Male - Rich)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Playback Speed</label>
+                            <select
+                              value={rocketForm.speed.toString()}
+                              onChange={(e) => setRocketForm({ ...rocketForm, speed: parseFloat(e.target.value) || 1.0 })}
+                              className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer"
+                            >
+                              <option value="0.75">0.75x (Slow focus)</option>
+                              <option value="0.9">0.9x (Deliberate)</option>
+                              <option value="1">1.0x (Standard)</option>
+                              <option value="1.15">1.15x (Accelerated)</option>
+                              <option value="1.3">1.30x (High speed)</option>
+                              <option value="1.5">1.50x (Skimming)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-border/10 pt-4 flex justify-end gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => setRocketsView('list')} 
+                            className="px-3.5 py-1.5 border border-border/20 rounded-none text-xs font-semibold text-sub hover:bg-surface/30 cursor-pointer uppercase tracking-wider"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            type="submit" 
+                            className="px-3.5 py-1.5 bg-text text-bg font-semibold rounded-none text-xs hover:bg-transparent hover:text-text border border-text transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                          >
+                            <Plus size={12} /> Launch Rocket
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Rocket Player View */}
+              {rocketsView === 'player' && selectedRocket && (
+                <div className="space-y-4">
+                  {/* Header Row */}
+                  <div className="flex justify-between items-center select-none font-sans">
+                    <button 
+                      onClick={handleClosePlayer}
+                      className="flex items-center gap-1.5 text-xs text-dim hover:text-text uppercase tracking-wider font-bold cursor-pointer"
+                    >
+                      <ArrowLeft size={13} /> Exit Reader
+                    </button>
+                    
+                    <span className="text-[10px] text-dim font-bold uppercase tracking-widest leading-none">
+                      {selectedRocket.title}
+                    </span>
+                  </div>
+
+                  {/* Elegant Stage Screen */}
+                  <div className="border border-border/40 rounded-none overflow-hidden flex flex-col">
+                    
+                    {/* Stage Container */}
+                    <div 
+                      id="stage" 
+                      className={`relative min-h-[300px] p-6 sm:p-12 flex flex-col justify-center transition-colors duration-300 ${
+                        rocketPlayerState.isDarkStage ? 'dark-stage' : 'bg-[#f2ede4]'
+                      } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
+                    >
+                      {/* Prev Line */}
+                      <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
+                        {rocketPlayerState.currentSlide > 0 
+                          ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
+                          : ''
+                        }
+                      </div>
+
+                      {/* Current Line Word Tokens */}
+                      <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
+                        {(() => {
+                          const slides = parseText(selectedRocket.raw_text);
+                          const text = slides[rocketPlayerState.currentSlide] || '';
+                          const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                          
+                          return tokens.map((token, i) => {
+                            const isActive = rocketPlayerState.activeWordIndex === i;
+                            return (
+                              <Fragment key={i}>
+                                <span 
+                                  onClick={() => handleWordClick(i)}
+                                  className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                                >
+                                  {token.word}
+                                </span>
+                                {' '}
+                              </Fragment>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar Wrapper */}
+                    <div id="progress-bar-wrap" className="h-1 bg-[#333] w-full overflow-hidden select-none">
+                      <div 
+                        id="progress-bar" 
+                        className="h-full bg-[#c8622a] transition-all duration-100"
+                        style={{
+                          width: `${playbackProgress}%`
+                        }}
+                      />
+                    </div>
+
+                    {/* Mobile & Desktop Responsive Controls Panel */}
+                    <div className="bg-[#222] border-t border-[#333] p-4 flex flex-col md:flex-row justify-between items-center gap-4 select-none font-sans text-xs text-[#e8e0d4]">
+                      {/* Left: Nav and Play Controls */}
+                      <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                        <div className="flex items-center gap-1.5">
+                          {/* Restart */}
+                          <button
+                            onClick={() => playSlide(0)}
+                            title="Restart from beginning"
+                            className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] cursor-pointer"
+                          >
+                            <RotateCcw size={13} />
+                          </button>
+
+                          <button 
+                            onClick={handlePrevSlide}
+                            disabled={rocketPlayerState.currentSlide === 0}
+                            className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                          >
+                            <SkipBack size={14} />
+                          </button>
+                          
+                          <button 
+                            onClick={handlePlayPause}
+                            className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold cursor-pointer"
+                          >
+                            {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
+                          </button>
+
+                          <button 
+                            onClick={handleNextSlide}
+                            disabled={
+                              rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1
+                            }
+                            className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                          >
+                            <SkipForward size={14} />
+                          </button>
+                        </div>
+
+                        {/* Slide Counter */}
+                        <span className="text-[#888] font-mono font-semibold">
+                          {rocketPlayerState.currentSlide + 1} / {parseText(selectedRocket.raw_text).length}
+                        </span>
+                      </div>
+
+                      {/* Right: Stage Controls, Speeds, and Options */}
+                      <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                        {/* Speed select */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#888] font-bold uppercase tracking-wider text-[10px]">Speed</span>
+                          <select 
+                            value={rocketPlayerState.speed.toString()}
+                            onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
+                            className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs"
+                          >
+                            <option value="0.75">0.75x</option>
+                            <option value="0.9">0.9x</option>
+                            <option value="1">1.0x</option>
+                            <option value="1.15">1.15x</option>
+                            <option value="1.3">1.3x</option>
+                            <option value="1.5">1.5x</option>
+                          </select>
+                        </div>
+
+                        {/* Highlight mode */}
+                        <button 
+                          onClick={() => setRocketPlayerState(prev => ({ ...prev, highlightMode: !prev.highlightMode }))}
+                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                            rocketPlayerState.highlightMode 
+                              ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
+                              : 'bg-[#2a2a2a] hover:bg-[#333]'
+                          }`}
+                        >
+                          Box Highlight
+                        </button>
+
+                        {/* Dark stage toggle */}
+                        <button 
+                          onClick={() => setRocketPlayerState(prev => ({ ...prev, isDarkStage: !prev.isDarkStage }))}
+                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                            rocketPlayerState.isDarkStage 
+                              ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
+                              : 'bg-[#2a2a2a] hover:bg-[#333]'
+                          }`}
+                        >
+                          Dark Stage
+                        </button>
+
+                        {/* Focus Mode toggle */}
+                        <button
+                          onClick={enterFocusMode}
+                          title="Enter Focus Mode"
+                          className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#c8622a] hover:border-[#c8622a] active:scale-95 transition-all text-[#e8e0d4] cursor-pointer"
+                        >
+                          <Maximize2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* ================================================================= */}
+              {/* FOCUS MODE OVERLAY                                                */}
+              {/* ================================================================= */}
+              {isFocusMode && selectedRocket && (
+                  <div
+                    ref={focusModeRef}
+                    className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-colors duration-300 ${
+                      rocketPlayerState.isDarkStage ? 'bg-[#111]' : 'bg-[#f2ede4]'
+                    } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
+                  >
+                    {/* Exit Focus Mode button */}
+                    <button
+                      onClick={exitFocusMode}
+                    title="Exit Focus Mode"
+                    className={`absolute top-5 right-5 p-2.5 rounded-none border transition-all cursor-pointer opacity-10 hover:opacity-90 ${
+                      rocketPlayerState.isDarkStage
+                        ? 'border-[#444] bg-[#1e1e1e] text-[#e8e0d4]'
+                        : 'border-[#c9bfb2] bg-[#e8e1d6] text-[#2a2520]'
+                    }`}
+                  >
+                    <Minimize2 size={15} />
+                  </button>
+
+                  {/* Prev line — ghost */}
+                  <div
+                    className={`font-serif text-[15px] italic leading-relaxed min-h-[24px] select-none mb-6 px-8 text-center max-w-2xl ${
+                      rocketPlayerState.isDarkStage ? 'text-[#e8e0d4] opacity-20' : 'text-[#2a2520] opacity-20'
+                    }`}
+                  >
+                    {rocketPlayerState.currentSlide > 0
+                      ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1]
+                      : ''}
+                  </div>
+
+                  {/* Current line — full focus */}
+                  <div
+                    className={`font-serif text-3xl sm:text-4xl md:text-5xl leading-relaxed text-center max-w-3xl px-8 select-text ${
+                      rocketPlayerState.isDarkStage ? 'text-[#f2ede4]' : 'text-[#2a2520]'
+                    }`}
+                  >
+                    {(() => {
+                      const slides = parseText(selectedRocket.raw_text);
+                      const text = slides[rocketPlayerState.currentSlide] || '';
+                      const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                      return tokens.map((token, i) => {
+                        const isActive = rocketPlayerState.activeWordIndex === i;
+                        return (
+                          <Fragment key={i}>
+                            <span
+                              onClick={() => handleWordClick(i)}
+                              className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                            >
+                              {token.word}
+                            </span>
+                            {' '}
+                          </Fragment>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Slim progress bar at bottom */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 h-[3px] ${
+                      rocketPlayerState.isDarkStage ? 'bg-[#2a2a2a]' : 'bg-[#d8d0c4]'
+                    }`}
+                  >
+                    <div
+                      className="h-full bg-[#c8622a] transition-all duration-100"
+                      style={{ width: `${playbackProgress}%` }}
+                    />
+                  </div>
+
+                  {/* Floating minimal controls — opacity fades, hover restores */}
+                  <div
+                    className={`absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 border transition-all opacity-10 hover:opacity-90 ${
+                      rocketPlayerState.isDarkStage
+                        ? 'border-[#333] bg-[#1a1a1a] text-[#e8e0d4]'
+                        : 'border-[#c9bfb2] bg-[#e8e1d6] text-[#2a2520]'
+                    }`}
+                  >
+                    <button
+                      onClick={() => playSlide(0)}
+                      title="Restart"
+                      className="p-1.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer"
+                    >
+                      <RotateCcw size={13} />
+                    </button>
+
+                    <button
+                      onClick={handlePrevSlide}
+                      disabled={rocketPlayerState.currentSlide === 0}
+                      className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+                    >
+                      <SkipBack size={14} />
+                    </button>
+
+                    <button
+                      onClick={handlePlayPause}
+                      className="p-2 bg-[#c8622a] text-white hover:bg-[#b85c1e] active:scale-90 transition-all cursor-pointer"
+                    >
+                      {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
+                    </button>
+
+                    <button
+                      onClick={handleNextSlide}
+                      disabled={rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
+                      className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
+                    >
+                      <SkipForward size={14} />
+                    </button>
+
+                    <span className="font-mono text-[10px] font-bold opacity-60 ml-1">
+                      {rocketPlayerState.currentSlide + 1} / {parseText(selectedRocket.raw_text).length}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
 
         </div>
       )}

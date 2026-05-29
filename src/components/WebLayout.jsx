@@ -69,7 +69,7 @@ export default function WebLayout() {
       </div>
 
       {/* Premium Floating Bottom Navigation Dock (Mobile) */}
-      <div className="md:hidden fixed bottom-6 left-6 right-6 glass-pill-premium border px-6 py-3 rounded-full flex justify-around items-center z-50 animate-fadeIn shadow-2xl">
+      <div className="md:hidden fixed bottom-6 left-6 right-6 glass-pill-premium border px-4 py-3 rounded-full flex justify-around items-center z-50 animate-fadeIn shadow-2xl">
         <MobileNavItem to="/app/notes" icon={<BookOpen size={16} />} label="Notes" />
         <MobileNavItem to="/app/attendance" icon={<ClipboardCheck size={16} />} label="Presence" />
         <MobileNavItem to="/app/focus" icon={<Flame size={16} />} label="Focus" />

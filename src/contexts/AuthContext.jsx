@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { auth, signInWithGoogle as firebaseSignIn, logoutUser as firebaseSignOut } from '../services/firebase';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { initSupabase } from '../services/supabase';
+import { initFocusSupabase } from '../services/focusService';
 
 const AuthContext = createContext({
   user: null,
@@ -31,6 +32,7 @@ export default function AuthProvider({ children }) {
         });
         try {
           await initSupabase();
+          await initFocusSupabase();
         } catch (err) {
           console.error("Supabase init failed", err);
         }

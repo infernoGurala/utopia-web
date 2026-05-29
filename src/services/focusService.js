@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { doc, getDoc } from 'firebase/firestore';
+import { getRemoteConfig, fetchAndActivate, getString } from 'firebase/remote-config';
+import { app as firebaseApp } from './firebase';
 import { db } from './firebase';
 import { getSupabase } from './supabase';
 
@@ -580,6 +582,391 @@ export const focusService = {
       }
     } catch (e) {
       console.warn('Failed to delete reminder on Supabase:', e);
+    }
+  },
+
+  // ──────────────────────────── New Habits Tracker (Loop) ────────────────────────────
+
+  /**
+   * Fetch habits for a user
+   */
+  async getHabits(userId, includeArchived = false) {
+    let habitsList = localDb.get(userId, 'habits_list', []);
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        let query = supabase.from('habits').select('*').eq('user_id', userId);
+        if (!includeArchived) {
+          query = query.eq('is_archived', false);
+        }
+        const { data, error } = await query.order('created_at', { ascending: true });
+        if (!error && data) {
+          habitsList = data;
+          localDb.set(userId, 'habits_list', data);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load habits from Supabase:', e);
+    }
+    if (!includeArchived) {
+      return habitsList.filter(h => !h.is_archived);
+    }
+    return habitsList;
+  },
+
+  /**
+   * Save or update a habit
+   */
+  async saveHabit(userId, habit) {
+    const now = new Date().toISOString();
+    const habitData = {
+      ...habit,
+      user_id: userId,
+      updated_at: now
+    };
+    if (!habitData.id) {
+      habitData.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+      habitData.created_at = now;
+    }
+
+    // 1. Save locally
+    const habits = localDb.get(userId, 'habits_list', []);
+    const filtered = habits.filter(h => h.id !== habitData.id);
+    localDb.set(userId, 'habits_list', [habitData, ...filtered]);
+
+    // 2. Sync to Supabase
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        const { error } = await supabase.from('habits').upsert(habitData, { onConflict: 'id' });
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.warn('Failed to sync habit to Supabase:', e);
+    }
+    return habitData;
+  },
+
+  /**
+   * Delete a habit and its records
+   */
+  async deleteHabit(userId, habitId) {
+    // 1. Delete locally
+    const habits = localDb.get(userId, 'habits_list', []);
+    localDb.set(userId, 'habits_list', habits.filter(h => h.id !== habitId));
+
+    const records = localDb.get(userId, 'habit_records_list', []);
+    localDb.set(userId, 'habit_records_list', records.filter(r => r.habit_id !== habitId));
+
+    try {
+      localStorage.removeItem(getLocalKey(userId, `habit_records_${habitId}`));
+    } catch {}
+
+    // 2. Sync to Supabase
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        await supabase.from('habits').delete().eq('id', habitId);
+        await supabase.from('habit_records').delete().eq('habit_id', habitId);
+      }
+    } catch (e) {
+      console.warn('Failed to delete habit from Supabase:', e);
+    }
+  },
+
+  /**
+   * Fetch log records for a habit
+   */
+  async getRecordsForHabit(userId, habitId) {
+    let recordList = localDb.get(userId, `habit_records_${habitId}`, []);
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('habit_records')
+          .select('*')
+          .eq('habit_id', habitId)
+          .eq('user_id', userId)
+          .order('date', { ascending: true });
+        if (!error && data) {
+          recordList = data;
+          localDb.set(userId, `habit_records_${habitId}`, data);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load habit records from Supabase:', e);
+    }
+    return recordList;
+  },
+
+  /**
+   * Save a habit checklist or progress log record
+   */
+  async saveRecord(userId, record) {
+    const now = new Date().toISOString();
+    const recordData = {
+      ...record,
+      user_id: userId,
+      updated_at: now
+    };
+    if (!recordData.id) {
+      recordData.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    }
+
+    // 1. Save locally
+    const records = localDb.get(userId, `habit_records_${recordData.habit_id}`, []);
+    const filtered = records.filter(r => r.date !== recordData.date);
+    const updated = [recordData, ...filtered];
+    localDb.set(userId, `habit_records_${recordData.habit_id}`, updated);
+
+    const globalRecords = localDb.get(userId, 'habit_records_list', []);
+    const filteredGlobal = globalRecords.filter(r => r.id !== recordData.id);
+    localDb.set(userId, 'habit_records_list', [recordData, ...filteredGlobal]);
+
+    // 2. Sync to Supabase
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        const { error } = await supabase.from('habit_records').upsert(recordData, { onConflict: 'id' });
+        if (error) throw error;
+      }
+    } catch (e) {
+      console.warn('Failed to sync habit record to Supabase:', e);
+    }
+    return recordData;
+  },
+
+  /**
+   * Delete a habit log record
+   */
+  async deleteRecord(userId, habitId, date) {
+    // 1. Delete locally
+    const records = localDb.get(userId, `habit_records_${habitId}`, []);
+    const updated = records.filter(r => r.date !== date);
+    localDb.set(userId, `habit_records_${habitId}`, updated);
+
+    const globalRecords = localDb.get(userId, 'habit_records_list', []);
+    localDb.set(userId, 'habit_records_list', globalRecords.filter(r => !(r.habit_id === habitId && r.date === date)));
+
+    // 2. Sync to Supabase
+    try {
+      const supabase = await initFocusSupabase();
+      if (supabase) {
+        await supabase.from('habit_records').delete().match({ habit_id: habitId, date, user_id: userId });
+      }
+    } catch (e) {
+      console.warn('Failed to delete habit record from Supabase:', e);
+    }
+  },
+
+  /**
+   * Export all user habits and records in JSON format
+   */
+  async exportHabitsBackupData(userId) {
+    const habits = await this.getHabits(userId, true);
+    const recordsList = [];
+    for (const h of habits) {
+      const recs = await this.getRecordsForHabit(userId, h.id);
+      recordsList.push(...recs);
+    }
+
+    const backupData = {
+      backup_version: 1,
+      exported_at: new Date().toISOString(),
+      habits,
+      records: recordsList
+    };
+    return JSON.stringify(backupData, null, 2);
+  },
+
+  /**
+   * Import habits and records from JSON backup string
+   */
+  async importHabitsFromJson(userId, jsonContent) {
+    const data = JSON.parse(jsonContent);
+    if (!data.habits || !data.records) {
+      throw new Error('Invalid backup file format');
+    }
+
+    // Import habits
+    for (const h of data.habits) {
+      const cleanHabit = {
+        id: h.id,
+        name: h.name,
+        description: h.description,
+        type: h.type || 'binary',
+        target_value: parseFloat(h.target_value) || 1.0,
+        unit: h.unit,
+        frequency_type: h.frequency_type || 'daily',
+        frequency_value: parseInt(h.frequency_value) || 1,
+        days_of_week: h.days_of_week,
+        reminder_time: h.reminder_time,
+        color: h.color || '#08BB68',
+        is_archived: !!h.is_archived,
+        created_at: h.created_at,
+        updated_at: h.updated_at
+      };
+      await this.saveHabit(userId, cleanHabit);
+    }
+
+    // Import records
+    for (const r of data.records) {
+      const cleanRecord = {
+        id: r.id,
+        habit_id: r.habit_id,
+        date: r.date,
+        value: parseFloat(r.value) || 0.0,
+        target_value: parseFloat(r.target_value) || 1.0,
+        completed: !!r.completed,
+        note: r.note,
+        updated_at: r.updated_at
+      };
+      await this.saveRecord(userId, cleanRecord);
+    }
+    return true;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rockets Service
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _remoteConfig = null;
+let _rcInitialized = false;
+let _storageConfigCache = null;
+let _cloudinarySecretsCache = null;
+
+async function getRemoteConfigInstance() {
+  if (_rcInitialized && _remoteConfig) return _remoteConfig;
+  try {
+    _remoteConfig = getRemoteConfig(firebaseApp);
+    _remoteConfig.settings = { minimumFetchIntervalMillis: 3600000 };
+    await fetchAndActivate(_remoteConfig);
+    _rcInitialized = true;
+  } catch (e) {
+    console.warn('Remote Config fetch failed:', e);
+    _rcInitialized = true; // don't retry on every call
+  }
+  return _remoteConfig;
+}
+
+async function getStorageConfig() {
+  if (_storageConfigCache) return _storageConfigCache;
+  try {
+    const configDoc = await getDoc(doc(db, 'app_config', 'storage_config'));
+    if (configDoc.exists()) {
+      _storageConfigCache = configDoc.data();
+      return _storageConfigCache;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch storage_config from Firestore:', e);
+  }
+  return null;
+}
+
+async function getCloudinarySecrets() {
+  if (_cloudinarySecretsCache) return _cloudinarySecretsCache;
+  try {
+    const rc = await getRemoteConfigInstance();
+    const apiKey    = getString(rc, 'cloudinary_api_key');
+    const apiSecret = getString(rc, 'cloudinary_api_secret');
+    const cloudName = getString(rc, 'cloudinary_cloud_name');
+    if (apiKey && apiSecret && cloudName) {
+      _cloudinarySecretsCache = { apiKey, apiSecret, cloudName };
+      return _cloudinarySecretsCache;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch Cloudinary secrets from Remote Config:', e);
+  }
+  return null;
+}
+
+export async function getRocketCredentials() {
+  const [storageCfg, clSecrets] = await Promise.all([getStorageConfig(), getCloudinarySecrets()]);
+  
+  let supabaseCfg = null;
+  try {
+    const configDoc = await getDoc(doc(db, 'config', 'supabase-focus-1'));
+    if (configDoc.exists()) {
+      const data = configDoc.data();
+      supabaseCfg = {
+        url: data.url,
+        anon_key: data.anon_key
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to fetch dedicated supabase-focus-1 config for rockets:', e);
+  }
+  
+  return { storageCfg, clSecrets, supabaseCfg };
+}
+
+export const rocketService = {
+  /**
+   * Fetch all rockets for a user, newest first.
+   */
+  async getRockets(userId) {
+    const local = JSON.parse(localStorage.getItem(`utopia_rockets_${userId}`) || '[]');
+    try {
+      const supabase = getFocusSupabase();
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('focus_rockets')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          localStorage.setItem(`utopia_rockets_${userId}`, JSON.stringify(data));
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load rockets from Supabase:', e);
+    }
+    return local;
+  },
+
+  /**
+   * Save (upsert) a rocket document.
+   */
+  async saveRocket(userId, rocket) {
+    const now = new Date().toISOString();
+    const record = { ...rocket, user_id: userId, created_at: rocket.created_at || now };
+    if (!record.id) {
+      record.id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2)}`;
+    }
+
+    // local cache
+    const local = JSON.parse(localStorage.getItem(`utopia_rockets_${userId}`) || '[]');
+    const filtered = local.filter(r => r.id !== record.id);
+    localStorage.setItem(`utopia_rockets_${userId}`, JSON.stringify([record, ...filtered]));
+
+    try {
+      const supabase = getFocusSupabase();
+      if (supabase) {
+        await supabase
+          .from('focus_rockets')
+          .upsert(record, { onConflict: 'id' });
+      }
+    } catch (e) {
+      console.warn('Failed to sync rocket to Supabase:', e);
+    }
+    return record;
+  },
+
+  /**
+   * Delete a rocket by id.
+   */
+  async deleteRocket(userId, rocketId) {
+    const local = JSON.parse(localStorage.getItem(`utopia_rockets_${userId}`) || '[]');
+    localStorage.setItem(`utopia_rockets_${userId}`, JSON.stringify(local.filter(r => r.id !== rocketId)));
+    try {
+      const supabase = getFocusSupabase();
+      if (supabase) {
+        await supabase.from('focus_rockets').delete().eq('id', rocketId);
+      }
+    } catch (e) {
+      console.warn('Failed to delete rocket from Supabase:', e);
     }
   }
 };
