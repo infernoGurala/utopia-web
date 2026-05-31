@@ -149,6 +149,9 @@ export default function FocusScreen() {
   });
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState({ current: 0, total: 0 });
+  const [preloadError, setPreloadError] = useState(null);
 
   // Refs for tracking active audio playback, timings, and sync loops
   const activeAudioRef = useRef(null);
@@ -156,6 +159,9 @@ export default function FocusScreen() {
   const activeTimedTokensRef = useRef([]);
   const currentSlideRef = useRef(0);
   const focusModeRef = useRef(null);
+  const preloadedAudioUrlsRef = useRef([]);
+  const preloadedUrlsRef = useRef([]);
+  const abortControllerRef = useRef(null);
   // Fullscreen API helpers for Focus Mode
   const enterFocusMode = () => {
     setIsFocusMode(true);
@@ -187,6 +193,22 @@ export default function FocusScreen() {
     return () => {
       document.removeEventListener('fullscreenchange', onFsChange);
       document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+  }, []);
+
+  // Cleanup preloaded Blob URLs and abort ongoing fetches on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (preloadedUrlsRef.current && preloadedUrlsRef.current.length > 0) {
+        preloadedUrlsRef.current.forEach(url => {
+          if (url && url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
+      }
     };
   }, []);
 
@@ -254,7 +276,7 @@ export default function FocusScreen() {
             if (target) {
               setSelectedRocket(target);
               setRocketsView('player');
-              setTimeout(() => playSlide(0), 100);
+              preloadRocketAudios(target);
             } else {
               setRocketsView('list');
               setSelectedRocket(null);
@@ -660,6 +682,80 @@ export default function FocusScreen() {
     }
   };
 
+  const preloadRocketAudios = async (rocket) => {
+    setIsPreloading(true);
+    setPreloadError(null);
+    const slides = parseText(rocket.raw_text);
+    const total = slides.length;
+    setPreloadProgress({ current: 0, total });
+
+    // Cancel any ongoing preloading or audio
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    // Revoke previous blob URLs to avoid memory leaks
+    if (preloadedUrlsRef.current && preloadedUrlsRef.current.length > 0) {
+      preloadedUrlsRef.current.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+    preloadedUrlsRef.current = [];
+    preloadedAudioUrlsRef.current = [];
+
+    const preloaded = new Array(total).fill(null);
+
+    try {
+      for (let i = 0; i < total; i++) {
+        if (signal.aborted) return;
+
+        const originalUrl = rocket.supabase_audio_urls[i] || rocket.cloudinary_audio_urls[i];
+        if (!originalUrl) {
+          preloaded[i] = null;
+          setPreloadProgress({ current: i + 1, total });
+          continue;
+        }
+
+        try {
+          const res = await fetch(originalUrl, { signal });
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          const blob = await res.blob();
+          if (signal.aborted) return;
+          const blobUrl = URL.createObjectURL(blob);
+          preloaded[i] = blobUrl;
+          preloadedUrlsRef.current.push(blobUrl);
+        } catch (fetchErr) {
+          console.warn(`Failed to pre-fetch audio for slide ${i}, falling back to direct URL:`, fetchErr);
+          preloaded[i] = originalUrl;
+        }
+
+        if (signal.aborted) return;
+        setPreloadProgress({ current: i + 1, total });
+      }
+
+      if (signal.aborted) return;
+      preloadedAudioUrlsRef.current = preloaded;
+      setIsPreloading(false);
+      
+      // Auto-start playSlide(0) once preload completes
+      playSlide(0);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error('Error preloading rocket audios:', err);
+      // Fallback: assign original URLs to all
+      for (let i = 0; i < total; i++) {
+        preloaded[i] = rocket.supabase_audio_urls[i] || rocket.cloudinary_audio_urls[i];
+      }
+      preloadedAudioUrlsRef.current = preloaded;
+      setIsPreloading(false);
+      playSlide(0);
+    }
+  };
+
   const playSlide = (slideIndex) => {
     currentSlideRef.current = slideIndex;
     if (activeAudioRef.current) {
@@ -675,7 +771,7 @@ export default function FocusScreen() {
     const slides = parseText(selectedRocket.raw_text);
     if (slideIndex < 0 || slideIndex >= slides.length) return;
 
-    const audioUrl = selectedRocket.supabase_audio_urls[slideIndex] || selectedRocket.cloudinary_audio_urls[slideIndex];
+    const audioUrl = preloadedAudioUrlsRef.current[slideIndex] || selectedRocket.supabase_audio_urls[slideIndex] || selectedRocket.cloudinary_audio_urls[slideIndex];
     if (!audioUrl) {
       console.warn("No audio URL found for slide", slideIndex);
       return;
@@ -837,6 +933,20 @@ export default function FocusScreen() {
   };
 
   const handleClosePlayer = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (preloadedUrlsRef.current && preloadedUrlsRef.current.length > 0) {
+      preloadedUrlsRef.current.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+    preloadedUrlsRef.current = [];
+    preloadedAudioUrlsRef.current = [];
+    setIsPreloading(false);
+
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
       activeAudioRef.current = null;
@@ -1193,37 +1303,77 @@ export default function FocusScreen() {
                   rocketPlayerState.isDarkStage ? 'dark-stage' : 'bg-[#f2ede4]'
                 } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
               >
-                {/* Prev Line */}
-                <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
-                  {rocketPlayerState.currentSlide > 0 
-                    ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
-                    : ''
-                  }
-                </div>
-
-                {/* Current Line Word Tokens */}
-                <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
-                  {(() => {
-                    const slides = parseText(selectedRocket.raw_text);
-                    const text = slides[rocketPlayerState.currentSlide] || '';
-                    const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                {isPreloading ? (
+                  <div className="flex flex-col items-center justify-center py-8 select-none text-center animate-fadeIn">
+                    <h4 className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-4 ${
+                      rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                    }`}>
+                      System Pre-Flight Check
+                    </h4>
+                    <UtopiaLoader scale={1.2} squareBg={rocketPlayerState.isDarkStage ? '#f2ebfa' : '#2a2520'} />
+                    <div className="mt-6 space-y-2">
+                      <h3 className={`font-serif font-bold italic text-lg sm:text-xl ${
+                        rocketPlayerState.isDarkStage ? 'text-[#f2ebfa]' : 'text-[#2a2520]'
+                      }`}>
+                        Fueling "{selectedRocket.title}"
+                      </h3>
+                      <p className={`text-[10px] font-mono font-bold uppercase tracking-widest animate-pulse ${
+                        rocketPlayerState.isDarkStage ? 'text-[#e8774a]' : 'text-[#c8622a]'
+                      }`}>
+                        Loading tracks: {preloadProgress.current} / {preloadProgress.total}
+                      </p>
+                    </div>
                     
-                    return tokens.map((token, i) => {
-                      const isActive = rocketPlayerState.activeWordIndex === i;
-                      return (
-                        <Fragment key={i}>
-                          <span 
-                            onClick={() => handleWordClick(i)}
-                            className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
-                          >
-                            {token.word}
-                          </span>
-                          {' '}
-                        </Fragment>
-                      );
-                    });
-                  })()}
-                </div>
+                    {/* Elegant Mono Progress Bar */}
+                    <div className={`w-56 h-[3px] relative overflow-hidden mt-6 mx-auto ${
+                      rocketPlayerState.isDarkStage ? 'bg-[#312347]' : 'bg-[#dfdcd6]'
+                    }`}>
+                      <div 
+                        className="h-full bg-[#c8622a] transition-all duration-300 ease-out" 
+                        style={{ width: `${(preloadProgress.current / (preloadProgress.total || 1)) * 100}%` }}
+                      />
+                    </div>
+                    <p className={`text-[9px] font-sans mt-2 lowercase font-bold uppercase tracking-widest ${
+                      rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                    }`}>
+                      preloading all audio nodes for zero-latency playback
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Prev Line */}
+                    <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
+                      {rocketPlayerState.currentSlide > 0 
+                        ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
+                        : ''
+                      }
+                    </div>
+
+                    {/* Current Line Word Tokens */}
+                    <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
+                      {(() => {
+                        const slides = parseText(selectedRocket.raw_text);
+                        const text = slides[rocketPlayerState.currentSlide] || '';
+                        const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                        
+                        return tokens.map((token, i) => {
+                          const isActive = rocketPlayerState.activeWordIndex === i;
+                          return (
+                            <Fragment key={i}>
+                              <span 
+                                onClick={() => handleWordClick(i)}
+                                className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                              >
+                                {token.word}
+                              </span>
+                              {' '}
+                            </Fragment>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Progress Bar Wrapper */}
@@ -1244,7 +1394,7 @@ export default function FocusScreen() {
                   <div className="flex items-center gap-1.5">
                     <button 
                       onClick={handlePrevSlide}
-                      disabled={rocketPlayerState.currentSlide === 0}
+                      disabled={isPreloading || rocketPlayerState.currentSlide === 0}
                       className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                     >
                       <SkipBack size={14} />
@@ -1252,14 +1402,15 @@ export default function FocusScreen() {
                     
                     <button 
                       onClick={handlePlayPause}
-                      className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold cursor-pointer"
+                      disabled={isPreloading}
+                      className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                     >
                       {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
                     </button>
 
                     <button 
                       onClick={handleNextSlide}
-                      disabled={rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
+                      disabled={isPreloading || rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
                       className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                     >
                       <SkipForward size={14} />
@@ -1280,7 +1431,8 @@ export default function FocusScreen() {
                     <select 
                       value={rocketPlayerState.speed.toString()}
                       onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-                      className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs"
+                      disabled={isPreloading}
+                      className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs disabled:opacity-40 disabled:pointer-events-none"
                     >
                       <option value="0.75">0.75x</option>
                       <option value="0.9">0.9x</option>
@@ -1294,7 +1446,8 @@ export default function FocusScreen() {
                   {/* Highlight mode */}
                   <button 
                     onClick={() => setRocketPlayerState(prev => ({ ...prev, highlightMode: !prev.highlightMode }))}
-                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                    disabled={isPreloading}
+                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none ${
                       rocketPlayerState.highlightMode 
                         ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
                         : 'bg-[#2a2a2a] hover:bg-[#333]'
@@ -1306,7 +1459,8 @@ export default function FocusScreen() {
                   {/* Dark stage */}
                   <button 
                     onClick={() => setRocketPlayerState(prev => ({ ...prev, isDarkStage: !prev.isDarkStage }))}
-                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                    disabled={isPreloading}
+                    className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none ${
                       rocketPlayerState.isDarkStage 
                         ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
                         : 'bg-[#2a2a2a] hover:bg-[#333]'
@@ -2016,7 +2170,7 @@ export default function FocusScreen() {
                               if (isGenerating) return;
                               setSelectedRocket(rocket);
                               setRocketsView('player');
-                              setTimeout(() => playSlide(0), 100);
+                              preloadRocketAudios(rocket);
                             }}
                             className={`card-premium-mono rounded-none p-5 flex flex-col justify-between group transition-all ${isGenerating ? 'opacity-60 cursor-not-allowed select-none' : 'cursor-pointer'}`}
                           >
@@ -2225,37 +2379,77 @@ export default function FocusScreen() {
                         rocketPlayerState.isDarkStage ? 'dark-stage' : 'bg-[#f2ede4]'
                       } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
                     >
-                      {/* Prev Line */}
-                      <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
-                        {rocketPlayerState.currentSlide > 0 
-                          ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
-                          : ''
-                        }
-                      </div>
-
-                      {/* Current Line Word Tokens */}
-                      <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
-                        {(() => {
-                          const slides = parseText(selectedRocket.raw_text);
-                          const text = slides[rocketPlayerState.currentSlide] || '';
-                          const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                      {isPreloading ? (
+                        <div className="flex flex-col items-center justify-center py-8 select-none text-center animate-fadeIn">
+                          <h4 className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-4 ${
+                            rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                          }`}>
+                            System Pre-Flight Check
+                          </h4>
+                          <UtopiaLoader scale={1.2} squareBg={rocketPlayerState.isDarkStage ? '#f2ebfa' : '#2a2520'} />
+                          <div className="mt-6 space-y-2">
+                            <h3 className={`font-serif font-bold italic text-lg sm:text-xl ${
+                              rocketPlayerState.isDarkStage ? 'text-[#f2ebfa]' : 'text-[#2a2520]'
+                            }`}>
+                              Fueling "{selectedRocket.title}"
+                            </h3>
+                            <p className={`text-[10px] font-mono font-bold uppercase tracking-widest animate-pulse ${
+                              rocketPlayerState.isDarkStage ? 'text-[#e8774a]' : 'text-[#c8622a]'
+                            }`}>
+                              Loading tracks: {preloadProgress.current} / {preloadProgress.total}
+                            </p>
+                          </div>
                           
-                          return tokens.map((token, i) => {
-                            const isActive = rocketPlayerState.activeWordIndex === i;
-                            return (
-                              <Fragment key={i}>
-                                <span 
-                                  onClick={() => handleWordClick(i)}
-                                  className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
-                                >
-                                  {token.word}
-                                </span>
-                                {' '}
-                              </Fragment>
-                            );
-                          });
-                        })()}
-                      </div>
+                          {/* Elegant Mono Progress Bar */}
+                          <div className={`w-56 h-[3px] relative overflow-hidden mt-6 mx-auto ${
+                            rocketPlayerState.isDarkStage ? 'bg-[#312347]' : 'bg-[#dfdcd6]'
+                          }`}>
+                            <div 
+                              className="h-full bg-[#c8622a] transition-all duration-300 ease-out" 
+                              style={{ width: `${(preloadProgress.current / (preloadProgress.total || 1)) * 100}%` }}
+                            />
+                          </div>
+                          <p className={`text-[9px] font-sans mt-2 lowercase font-bold uppercase tracking-widest ${
+                            rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                          }`}>
+                            preloading all audio nodes for zero-latency playback
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Prev Line */}
+                          <div id="prev-line" className="font-serif text-[15px] italic text-[#2a2520] opacity-25 leading-relaxed min-h-[24px] select-none">
+                            {rocketPlayerState.currentSlide > 0 
+                              ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1] 
+                              : ''
+                            }
+                          </div>
+
+                          {/* Current Line Word Tokens */}
+                          <div id="curr-line" className="font-serif text-2xl sm:text-3xl leading-relaxed text-[#2a2520] min-h-[70px] select-text">
+                            {(() => {
+                              const slides = parseText(selectedRocket.raw_text);
+                              const text = slides[rocketPlayerState.currentSlide] || '';
+                              const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                              
+                              return tokens.map((token, i) => {
+                                const isActive = rocketPlayerState.activeWordIndex === i;
+                                return (
+                                  <Fragment key={i}>
+                                    <span 
+                                      onClick={() => handleWordClick(i)}
+                                      className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                                    >
+                                      {token.word}
+                                    </span>
+                                    {' '}
+                                  </Fragment>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Progress Bar Wrapper */}
@@ -2277,15 +2471,16 @@ export default function FocusScreen() {
                           {/* Restart */}
                           <button
                             onClick={() => playSlide(0)}
+                            disabled={isPreloading}
                             title="Restart from beginning"
-                            className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] cursor-pointer"
+                            className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                           >
                             <RotateCcw size={13} />
                           </button>
 
                           <button 
                             onClick={handlePrevSlide}
-                            disabled={rocketPlayerState.currentSlide === 0}
+                            disabled={isPreloading || rocketPlayerState.currentSlide === 0}
                             className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                           >
                             <SkipBack size={14} />
@@ -2293,7 +2488,8 @@ export default function FocusScreen() {
                           
                           <button 
                             onClick={handlePlayPause}
-                            className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold cursor-pointer"
+                            disabled={isPreloading}
+                            className="p-2.5 border border-[#444] bg-[#c8622a] hover:bg-[#b85c1e] active:scale-95 transition-all text-white font-bold disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                           >
                             {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
                           </button>
@@ -2301,7 +2497,7 @@ export default function FocusScreen() {
                           <button 
                             onClick={handleNextSlide}
                             disabled={
-                              rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1
+                              isPreloading || rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1
                             }
                             className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#333] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                           >
@@ -2323,7 +2519,8 @@ export default function FocusScreen() {
                           <select 
                             value={rocketPlayerState.speed.toString()}
                             onChange={(e) => handleSpeedChange(parseFloat(e.target.value))}
-                            className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs"
+                            disabled={isPreloading}
+                            className="p-1.5 border border-[#444] bg-[#2a2a2a] text-[#e8e0d4] rounded-none focus:outline-none cursor-pointer text-xs disabled:opacity-40 disabled:pointer-events-none"
                           >
                             <option value="0.75">0.75x</option>
                             <option value="0.9">0.9x</option>
@@ -2337,7 +2534,8 @@ export default function FocusScreen() {
                         {/* Highlight mode */}
                         <button 
                           onClick={() => setRocketPlayerState(prev => ({ ...prev, highlightMode: !prev.highlightMode }))}
-                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                          disabled={isPreloading}
+                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none ${
                             rocketPlayerState.highlightMode 
                               ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
                               : 'bg-[#2a2a2a] hover:bg-[#333]'
@@ -2349,7 +2547,8 @@ export default function FocusScreen() {
                         {/* Dark stage toggle */}
                         <button 
                           onClick={() => setRocketPlayerState(prev => ({ ...prev, isDarkStage: !prev.isDarkStage }))}
-                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all ${
+                          disabled={isPreloading}
+                          className={`px-3 py-1.5 border border-[#444] rounded-none cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none ${
                             rocketPlayerState.isDarkStage 
                               ? 'bg-[#e8e0d4] text-[#1a1a1a] font-bold border-transparent' 
                               : 'bg-[#2a2a2a] hover:bg-[#333]'
@@ -2361,8 +2560,9 @@ export default function FocusScreen() {
                         {/* Focus Mode toggle */}
                         <button
                           onClick={enterFocusMode}
+                          disabled={isPreloading}
                           title="Enter Focus Mode"
-                          className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#c8622a] hover:border-[#c8622a] active:scale-95 transition-all text-[#e8e0d4] cursor-pointer"
+                          className="p-2 border border-[#444] bg-[#2a2a2a] hover:bg-[#c8622a] hover:border-[#c8622a] active:scale-95 transition-all text-[#e8e0d4] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                         >
                           <Maximize2 size={13} />
                         </button>
@@ -2380,7 +2580,7 @@ export default function FocusScreen() {
                   <div
                     ref={focusModeRef}
                     className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center transition-colors duration-300 ${
-                      rocketPlayerState.isDarkStage ? 'bg-[#111]' : 'bg-[#f2ede4]'
+                      rocketPlayerState.isDarkStage ? 'dark-stage' : 'bg-[#f2ede4]'
                     } ${rocketPlayerState.highlightMode ? 'style-highlight-active' : ''}`}
                   >
                     {/* Exit Focus Mode button */}
@@ -2396,99 +2596,141 @@ export default function FocusScreen() {
                     <Minimize2 size={15} />
                   </button>
 
-                  {/* Prev line — ghost */}
-                  <div
-                    className={`font-serif text-[15px] italic leading-relaxed min-h-[24px] select-none mb-6 px-8 text-center max-w-2xl ${
-                      rocketPlayerState.isDarkStage ? 'text-[#e8e0d4] opacity-20' : 'text-[#2a2520] opacity-20'
-                    }`}
-                  >
-                    {rocketPlayerState.currentSlide > 0
-                      ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1]
-                      : ''}
-                  </div>
+                    {isPreloading ? (
+                      <div className="flex flex-col items-center justify-center py-8 select-none text-center animate-fadeIn">
+                        <h4 className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-4 ${
+                          rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                        }`}>
+                          System Pre-Flight Check
+                        </h4>
+                        <UtopiaLoader scale={1.4} squareBg={rocketPlayerState.isDarkStage ? '#f2ebfa' : '#2a2520'} />
+                        <div className="mt-6 space-y-2">
+                          <h3 className={`font-serif font-bold italic text-2xl sm:text-3xl ${
+                            rocketPlayerState.isDarkStage ? 'text-[#f2ebfa]' : 'text-[#2a2520]'
+                          }`}>
+                            Fueling "{selectedRocket.title}"
+                          </h3>
+                          <p className={`text-xs font-mono font-bold uppercase tracking-widest animate-pulse ${
+                            rocketPlayerState.isDarkStage ? 'text-[#e8774a]' : 'text-[#c8622a]'
+                          }`}>
+                            Loading tracks: {preloadProgress.current} / {preloadProgress.total}
+                          </p>
+                        </div>
+                        
+                        {/* Elegant Mono Progress Bar */}
+                        <div className={`w-64 h-[3px] relative overflow-hidden mt-6 mx-auto ${
+                          rocketPlayerState.isDarkStage ? 'bg-[#312347]' : 'bg-[#dfdcd6]'
+                        }`}>
+                          <div 
+                            className="h-full bg-[#c8622a] transition-all duration-300 ease-out" 
+                            style={{ width: `${(preloadProgress.current / (preloadProgress.total || 1)) * 100}%` }}
+                          />
+                        </div>
+                        <p className={`text-[10px] font-sans mt-3 lowercase font-bold uppercase tracking-widest ${
+                          rocketPlayerState.isDarkStage ? 'text-[#a79bc2]' : 'text-[#5e544b]'
+                        }`}>
+                          preloading all audio nodes for zero-latency playback
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Prev line — ghost */}
+                        <div
+                          className={`font-serif text-[15px] italic leading-relaxed min-h-[24px] select-none mb-6 px-8 text-center max-w-2xl ${
+                            rocketPlayerState.isDarkStage ? 'text-[#e8e0d4] opacity-20' : 'text-[#2a2520] opacity-20'
+                          }`}
+                        >
+                          {rocketPlayerState.currentSlide > 0
+                            ? parseText(selectedRocket.raw_text)[rocketPlayerState.currentSlide - 1]
+                            : ''}
+                        </div>
 
-                  {/* Current line — full focus */}
-                  <div
-                    className={`font-serif text-3xl sm:text-4xl md:text-5xl leading-relaxed text-center max-w-3xl px-8 select-text ${
-                      rocketPlayerState.isDarkStage ? 'text-[#f2ede4]' : 'text-[#2a2520]'
-                    }`}
-                  >
-                    {(() => {
-                      const slides = parseText(selectedRocket.raw_text);
-                      const text = slides[rocketPlayerState.currentSlide] || '';
-                      const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
-                      return tokens.map((token, i) => {
-                        const isActive = rocketPlayerState.activeWordIndex === i;
-                        return (
-                          <Fragment key={i}>
-                            <span
-                              onClick={() => handleWordClick(i)}
-                              className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
-                            >
-                              {token.word}
-                            </span>
-                            {' '}
-                          </Fragment>
-                        );
-                      });
-                    })()}
-                  </div>
+                        {/* Current line — full focus */}
+                        <div
+                          className={`font-serif text-3xl sm:text-4xl md:text-5xl leading-relaxed text-center max-w-3xl px-8 select-text ${
+                            rocketPlayerState.isDarkStage ? 'text-[#f2ede4]' : 'text-[#2a2520]'
+                          }`}
+                        >
+                          {(() => {
+                            const slides = parseText(selectedRocket.raw_text);
+                            const text = slides[rocketPlayerState.currentSlide] || '';
+                            const tokens = prepareWordTokens(text, selectedRocket.groq_styles[rocketPlayerState.currentSlide]);
+                            return tokens.map((token, i) => {
+                              const isActive = rocketPlayerState.activeWordIndex === i;
+                              return (
+                                <Fragment key={i}>
+                                  <span
+                                    onClick={() => handleWordClick(i)}
+                                    className={`word-token revealed ${token.className} ${isActive ? 'active-word' : ''} cursor-pointer inline`}
+                                  >
+                                    {token.word}
+                                  </span>
+                                  {' '}
+                                </Fragment>
+                              );
+                            });
+                          })()}
+                        </div>
 
-                  {/* Slim progress bar at bottom */}
-                  <div
-                    className={`absolute bottom-0 left-0 right-0 h-[3px] ${
-                      rocketPlayerState.isDarkStage ? 'bg-[#2a2a2a]' : 'bg-[#d8d0c4]'
-                    }`}
-                  >
-                    <div
-                      className="h-full bg-[#c8622a] transition-all duration-100"
-                      style={{ width: `${playbackProgress}%` }}
-                    />
-                  </div>
+                        {/* Slim progress bar at bottom */}
+                        <div
+                          className={`absolute bottom-0 left-0 right-0 h-[3px] ${
+                            rocketPlayerState.isDarkStage ? 'bg-[#2a2a2a]' : 'bg-[#d8d0c4]'
+                          }`}
+                        >
+                          <div
+                            className="h-full bg-[#c8622a] transition-all duration-100"
+                            style={{ width: `${playbackProgress}%` }}
+                          />
+                        </div>
 
-                  {/* Floating minimal controls — opacity fades, hover restores */}
-                  <div
-                    className={`absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 border transition-all opacity-10 hover:opacity-90 ${
-                      rocketPlayerState.isDarkStage
-                        ? 'border-[#333] bg-[#1a1a1a] text-[#e8e0d4]'
-                        : 'border-[#c9bfb2] bg-[#e8e1d6] text-[#2a2520]'
-                    }`}
-                  >
-                    <button
-                      onClick={() => playSlide(0)}
-                      title="Restart"
-                      className="p-1.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer"
-                    >
-                      <RotateCcw size={13} />
-                    </button>
+                        {/* Floating minimal controls — opacity fades, hover restores */}
+                        <div
+                          className={`absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 border transition-all opacity-10 hover:opacity-90 ${
+                            rocketPlayerState.isDarkStage
+                              ? 'border-[#333] bg-[#1a1a1a] text-[#e8e0d4]'
+                              : 'border-[#c9bfb2] bg-[#e8e1d6] text-[#2a2520]'
+                          }`}
+                        >
+                          <button
+                            onClick={() => playSlide(0)}
+                            disabled={isPreloading}
+                            title="Restart"
+                            className="p-1.5 hover:opacity-70 active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            <RotateCcw size={13} />
+                          </button>
 
-                    <button
-                      onClick={handlePrevSlide}
-                      disabled={rocketPlayerState.currentSlide === 0}
-                      className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
-                    >
-                      <SkipBack size={14} />
-                    </button>
+                          <button
+                            onClick={handlePrevSlide}
+                            disabled={isPreloading || rocketPlayerState.currentSlide === 0}
+                            className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer disabled:pointer-events-none"
+                          >
+                            <SkipBack size={14} />
+                          </button>
 
-                    <button
-                      onClick={handlePlayPause}
-                      className="p-2 bg-[#c8622a] text-white hover:bg-[#b85c1e] active:scale-90 transition-all cursor-pointer"
-                    >
-                      {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
-                    </button>
+                          <button
+                            onClick={handlePlayPause}
+                            disabled={isPreloading}
+                            className="p-2 bg-[#c8622a] text-white hover:bg-[#b85c1e] active:scale-90 transition-all cursor-pointer disabled:opacity-35 disabled:pointer-events-none"
+                          >
+                            {rocketPlayerState.playing ? <Pause size={15} /> : <Play size={15} />}
+                          </button>
 
-                    <button
-                      onClick={handleNextSlide}
-                      disabled={rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
-                      className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer"
-                    >
-                      <SkipForward size={14} />
-                    </button>
+                          <button
+                            onClick={handleNextSlide}
+                            disabled={isPreloading || rocketPlayerState.currentSlide === parseText(selectedRocket.raw_text).length - 1}
+                            className="p-1.5 hover:opacity-70 disabled:opacity-30 active:scale-90 transition-all cursor-pointer disabled:pointer-events-none"
+                          >
+                            <SkipForward size={14} />
+                          </button>
 
-                    <span className="font-mono text-[10px] font-bold opacity-60 ml-1">
-                      {rocketPlayerState.currentSlide + 1} / {parseText(selectedRocket.raw_text).length}
-                    </span>
-                  </div>
+                          <span className="font-mono text-[10px] font-bold opacity-60 ml-1">
+                            {rocketPlayerState.currentSlide + 1} / {parseText(selectedRocket.raw_text).length}
+                          </span>
+                        </div>
+                      </>
+                    )}
                 </div>
               )}
             </div>
