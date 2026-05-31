@@ -29,25 +29,25 @@
 
 @layer base {
   :root {
-    /* ── Utopia Light: Warm Gold-Tinted Editorial Parchment ─────────────────── */
-    --bg: #faf7f2;
-    --surface: #efeadf;
-    --card: #fcfaf7;
-    --border: #1e1a16;
-    --text: #1e1a16;
-    --sub: #5e544b;
-    --dim: #948a7d;
-    --primary: #1e1a16;
-    --teal: #3a322a;
-    --red: #c93b4a;
-    --green: #4a4036;
-    --peach: #5a4d40;
-    --blue: #1e1a16;
-    --gold: #b59970;
-    --sky: #6e6050;
-    --lavender: #5e5245;
-    --gray: #8a7f72;
-    --primary-glow: rgba(30, 26, 22, 0.18);
+    /* ── Utopia Light: Premium Gold-White Editorial Solitude ─────────────────── */
+    --bg: #fcfbf9;
+    --surface: #f6f3eb;
+    --card: #ffffff;
+    --border: #d4c3a3;
+    --text: #2d271e;
+    --sub: #706353;
+    --dim: #a89b87;
+    --primary: #a98d5c;
+    --teal: #5c4e3b;
+    --red: #b83a4b;
+    --green: #4b6b55;
+    --peach: #e3a878;
+    --blue: #3e6482;
+    --gold: #c5a870;
+    --sky: #c2b196;
+    --lavender: #8d7a8f;
+    --gray: #b8af9f;
+    --primary-glow: rgba(169, 141, 92, 0.12);
   }
 
   .dark {

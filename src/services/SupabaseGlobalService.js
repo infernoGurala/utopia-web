@@ -29,30 +29,29 @@ export class SupabaseGlobalService {
   static async getDirectoryContents(directoryPath) {
     const supabase = getSupabase();
     
-    // Fetch child folders
-    const { data: folders, error: foldersError } = await supabase
-      .from('folders')
-      .select('*')
-      .eq('parent_path', directoryPath)
-      .eq('is_hidden', false)
-      .order('sort_index', { ascending: true })
-      .order('name', { ascending: true });
+    // Fetch child folders and notes in parallel to eliminate database waterfall delays
+    const [foldersRes, notesRes] = await Promise.all([
+      supabase
+        .from('folders')
+        .select('*')
+        .eq('parent_path', directoryPath)
+        .eq('is_hidden', false)
+        .order('sort_index', { ascending: true })
+        .order('name', { ascending: true }),
+      supabase
+        .from('notes')
+        .select('name, path, updated_at, sort_index')
+        .eq('folder_path', directoryPath)
+        .order('sort_index', { ascending: true })
+        .order('name', { ascending: true })
+    ]);
 
-    if (foldersError) throw foldersError;
-
-    // Fetch notes in this folder
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select('name, path, updated_at, sort_index')
-      .eq('folder_path', directoryPath)
-      .order('sort_index', { ascending: true })
-      .order('name', { ascending: true });
-
-    if (notesError) throw notesError;
+    if (foldersRes.error) throw foldersRes.error;
+    if (notesRes.error) throw notesRes.error;
 
     const items = [
-      ...folders.map(f => ({ ...f, type: 'dir' })),
-      ...notes.map(n => ({ ...n, type: 'file' }))
+      ...foldersRes.data.map(f => ({ ...f, type: 'dir' })),
+      ...notesRes.data.map(n => ({ ...n, type: 'file' }))
     ];
 
     return items;

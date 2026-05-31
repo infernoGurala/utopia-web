@@ -24,26 +24,25 @@ export default function LoginScreen() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row relative bg-bg overflow-hidden font-sans">
       
-      {/* LEFT HALF - Pure White Paper Aesthetic */}
-      <div className="w-full md:w-1/2 bg-[#fbfbfa] flex flex-col justify-between p-8 md:p-16 lg:p-24 shrink-0 min-h-[50vh] md:min-h-screen">
+      {/* LEFT HALF - Premium Ivory/Gold-White Paper Aesthetic */}
+      <div className="w-full md:w-1/2 bg-bg flex flex-col justify-between p-8 md:p-16 lg:p-24 shrink-0 min-h-[50vh] md:min-h-screen">
         
         {/* Top Spacer or Header */}
-        {/* Top Spacer or Header */}
-        <div className="editorial-text-spaced text-[#7c7c7c]">
+        <div className="editorial-text-spaced text-dim">
           UT.01 / ACADEMIA
         </div>
 
         {/* Main Content Area */}
         <div className="my-auto py-12 md:py-20 max-w-md">
           {/* Logo & Headline */}
-          <h1 className="text-7xl md:text-8xl lg:text-[7rem] font-serif font-light text-[#121212] tracking-tighter leading-[0.8] uppercase select-none">
+          <h1 className="text-7xl md:text-8xl lg:text-[7rem] font-serif font-light text-text tracking-tighter leading-[0.8] uppercase select-none">
             Utopia
           </h1>
           <span className="editorial-text-spaced text-dim block mt-4 mb-8 tracking-[0.55em] font-light">
             A c a d e m i a
           </span>
           
-          <p className="font-serif italic text-lg md:text-xl text-[#4c4c4c] font-light leading-relaxed mb-12 max-w-sm">
+          <p className="font-serif italic text-lg md:text-xl text-sub font-light leading-relaxed mb-12 max-w-sm">
             "A sanctuary for the quiet focus and deep thought of the modern academic mind."
           </p>
 
@@ -51,12 +50,12 @@ export default function LoginScreen() {
           <button
             onClick={handleLogin}
             disabled={isSigningIn}
-            className="w-full max-w-xs btn-premium-mono py-4 px-6 flex items-center justify-center gap-3 border border-[#121212] cursor-pointer"
+            className="w-full max-w-xs btn-premium-mono py-4 px-6 flex items-center justify-center gap-3 border border-text cursor-pointer"
           >
             {isSigningIn ? (
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 border-2 border-bg border-t-transparent rounded-full animate-spin"></div>
-                <span className="editorial-text-spaced text-bg">Signing in...</span>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                <span className="editorial-text-spaced">Signing in...</span>
               </div>
             ) : (
               <>
@@ -66,37 +65,37 @@ export default function LoginScreen() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                <span className="editorial-text-spaced text-bg">Continue with Google</span>
-                <ArrowRight className="w-3.5 h-3.5 text-bg" />
+                <span className="editorial-text-spaced">Continue with Google</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
           </button>
         </div>
 
         {/* Typographic Gallery Row at Bottom-Left */}
-        <div className="grid grid-cols-3 gap-6 pt-6 border-t border-[#121212]/10">
+        <div className="grid grid-cols-3 gap-6 pt-6 border-t border-border/40">
           <div>
-            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
-              01 / FOCUS
+            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-text font-semibold mb-1">
+              01 / ROCKETS
             </div>
-            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
-              Silent solitude of the desk.
+            <div className="font-serif italic text-xs text-sub leading-normal">
+              Neural TTS sync for deep reading.
             </div>
           </div>
           <div>
-            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
+            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-text font-semibold mb-1">
               02 / JOURNAL
             </div>
-            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
-              Ink marks the passing thought.
+            <div className="font-serif italic text-xs text-sub leading-normal">
+              Reflective ink marks passing thoughts.
             </div>
           </div>
           <div>
-            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-[#121212] font-semibold mb-1">
-              03 / TEMPLE
+            <div className="editorial-text-spaced text-[9px] tracking-[0.2em] text-text font-semibold mb-1">
+              03 / HABITS
             </div>
-            <div className="font-serif italic text-xs text-[#4c4c4c] leading-normal">
-              Time slips into quiet order.
+            <div className="font-serif italic text-xs text-sub leading-normal">
+              Structured rituals and quiet progress.
             </div>
           </div>
         </div>
@@ -119,8 +118,8 @@ export default function LoginScreen() {
         {/* Subdued top navigation item right in the corner, matching references */}
         <div className="absolute top-8 md:top-16 right-8 md:right-16 flex gap-6 md:gap-10">
           <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Journal</span>
-          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Library</span>
-          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Sanctuary</span>
+          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Tasks</span>
+          <span className="editorial-text-spaced text-white/70 select-none hover:text-white transition-colors cursor-pointer text-[10px]">Analytics</span>
         </div>
 
         {/* Small minimalist text block inside the black section */}
@@ -142,9 +141,9 @@ export default function LoginScreen() {
 
       {/* OVERLAPPING SOLID CONTRAST CAPSULE - Exactly in the center of the screen split */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none hidden md:block">
-        <div className="bg-[#fbfbfa] border border-[#121212]/15 rounded-full py-4 px-10 shadow-2xl shrink-0 whitespace-nowrap animate-fadeIn">
-          <span className="font-serif italic text-sm md:text-base text-[#121212] tracking-wider select-none">
-            "Photography for the timeless."
+        <div className="bg-card border border-border rounded-full py-4 px-10 shadow-2xl shrink-0 whitespace-nowrap animate-fadeIn">
+          <span className="font-serif italic text-sm md:text-base text-text tracking-wider select-none">
+            "Stay productive for the timeless."
           </span>
         </div>
       </div>

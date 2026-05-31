@@ -176,8 +176,10 @@ export default function NotesScreen() {
           setFolderIcons({});
         }
       } else {
-        const contents = await SupabaseGlobalService.getDirectoryContents(path);
-        const icons = await SupabaseGlobalService.getFolderIcons(path);
+        const [contents, icons] = await Promise.all([
+          SupabaseGlobalService.getDirectoryContents(path),
+          SupabaseGlobalService.getFolderIcons(path)
+        ]);
         if (latestFetchedPath.current === path) {
           setItems(contents);
           setFolderIcons(icons);

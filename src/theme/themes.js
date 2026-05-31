@@ -1,22 +1,22 @@
 export const themes = {
   'primary-light': {
-    bg: '#fbfbfa',         // Crisp luxury white paper feel
-    surface: '#f4f4f3',    // Light warm gray panel surface
+    bg: '#fcfbf9',         // Crisp luxury ivory white paper feel
+    surface: '#f6f3eb',    // Elegant soft warm champagne-gold panel surface
     card: '#ffffff',       // Pure white cards
-    border: '#1a1a1a',     // Thin, sharp rich black borders
-    text: '#121212',       // Rich black text
-    sub: '#4c4c4c',        // Deep graphite dark gray
-    dim: '#7c7c7c',        // Elegant mid-gray
-    primary: '#121212',    // Rich black primary accent
-    teal: '#2a2a2a',       // Deep steel gray for tertiary states
-    red: '#4c4c4c',        // Monochrome alert / critical state
-    green: '#121212',      // Pure black for positive indicators
-    peach: '#4c4c4c',      // Soft mid-dark gray
-    blue: '#121212',       // Classic monochrome
-    gold: '#7c7c7c',       // Muted gray gold substitute
-    sky: '#626262',        // Muted gray
-    lavender: '#4c4c4c',   // Soft dark gray
-    gray: '#7c7c7c',       // Balanced gray
+    border: '#d4c3a3',     // Warm satin gold-toned thin borders
+    text: '#2d271e',       // Deep charcoal-bronze brown text
+    sub: '#706353',        // Deep gold-bronze gray secondary text
+    dim: '#a89b87',        // Elegant champagne-gold/gray dim text
+    primary: '#a98d5c',    // Luxurious metallic gold accent
+    teal: '#5c4e3b',       // Deep gold-bronze for tertiary states
+    red: '#b83a4b',        // Crimson red that coordinates with gold
+    green: '#4b6b55',      // Deep sage green that looks stunning with gold
+    peach: '#e3a878',      // Soft warm gold-peach
+    blue: '#3e6482',       // Classic slate blue
+    gold: '#c5a870',       // Glowing gold
+    sky: '#c2b196',        // Warm sand-gold
+    lavender: '#8d7a8f',   // Muted warm plum
+    gray: '#b8af9f',       // Balanced gold-gray
     isDark: false,
   },
   'primary-dark': {
