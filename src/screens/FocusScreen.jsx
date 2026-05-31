@@ -72,6 +72,78 @@ const getWeekStart = (d) => {
   return new Date(date.setDate(diff));
 };
 
+const LOCAL_SAMPLE_ROCKETS = [
+  {
+    id: 'local-sample-bella',
+    title: '✧ Instant Demo — Bella (US Female)',
+    raw_text: 'The cosmos is within us; we are made of star-stuff, and we are a way for the universe to know itself.',
+    voice: 'af_bella',
+    speed: 1.0,
+    created_at: new Date('2026-05-30T12:00:00Z').toISOString(),
+    groq_styles: [
+      {
+        cosmos: 'w-key',
+        'star-stuff': 'w-strong',
+        starstuff: 'w-strong',
+        universe: 'w-key'
+      }
+    ],
+    supabase_audio_urls: ['/voices/sample_1.wav'],
+    cloudinary_audio_urls: [],
+    timings: [
+      [
+        {"start": 0, "end": 210}, {"start": 210, "end": 631}, {"start": 631, "end": 771}, {"start": 771, "end": 1192}, {"start": 1192, "end": 1353}, {"start": 1473, "end": 1613}, {"start": 1613, "end": 1824}, {"start": 1824, "end": 2104}, {"start": 2104, "end": 2245}, {"start": 2245, "end": 2917}, {"start": 3037, "end": 3247}, {"start": 3247, "end": 3387}, {"start": 3387, "end": 3598}, {"start": 3598, "end": 3718}, {"start": 3718, "end": 3928}, {"start": 3928, "end": 4139}, {"start": 4139, "end": 4349}, {"start": 4349, "end": 4910}, {"start": 4910, "end": 5051}, {"start": 5051, "end": 5331}, {"start": 5331, "end": 5773}
+      ]
+    ]
+  },
+  {
+    id: 'local-sample-sarah',
+    title: '✧ Instant Demo — Sarah (US Female — Warm)',
+    raw_text: 'Artificial intelligence is the next major step in human evolution, helping us unlock the secrets of the mind.',
+    voice: 'af_sarah',
+    speed: 1.0,
+    created_at: new Date('2026-05-30T12:05:00Z').toISOString(),
+    groq_styles: [
+      {
+        intelligence: 'w-key',
+        evolution: 'w-strong',
+        secrets: 'w-key',
+        mind: 'w-strong'
+      }
+    ],
+    supabase_audio_urls: ['/voices/sample_2.wav'],
+    cloudinary_audio_urls: [],
+    timings: [
+      [
+        {"start": 0, "end": 712}, {"start": 712, "end": 1512}, {"start": 1512, "end": 1655}, {"start": 1655, "end": 1869}, {"start": 1869, "end": 2154}, {"start": 2154, "end": 2510}, {"start": 2510, "end": 2795}, {"start": 2795, "end": 2938}, {"start": 2938, "end": 3294}, {"start": 3294, "end": 3957}, {"start": 4077, "end": 4575}, {"start": 4575, "end": 4718}, {"start": 4718, "end": 5146}, {"start": 5146, "end": 5359}, {"start": 5359, "end": 5858}, {"start": 5858, "end": 6001}, {"start": 6001, "end": 6215}, {"start": 6215, "end": 6521}
+      ]
+    ]
+  },
+  {
+    id: 'local-sample-adam',
+    title: '✧ Instant Demo — Adam (US Male — Deep)',
+    raw_text: 'Design is not just what it looks like and feels like; design is how it works.',
+    voice: 'am_adam',
+    speed: 1.0,
+    created_at: new Date('2026-05-30T12:10:00Z').toISOString(),
+    groq_styles: [
+      {
+        design: 'w-key',
+        looks: 'w-plain',
+        feels: 'w-strong',
+        works: 'w-key'
+      }
+    ],
+    supabase_audio_urls: ['/voices/sample_3.wav'],
+    cloudinary_audio_urls: [],
+    timings: [
+      [
+        {"start": 0, "end": 407}, {"start": 407, "end": 542}, {"start": 542, "end": 746}, {"start": 746, "end": 1017}, {"start": 1017, "end": 1288}, {"start": 1288, "end": 1424}, {"start": 1424, "end": 1763}, {"start": 1763, "end": 2035}, {"start": 2035, "end": 2238}, {"start": 2238, "end": 2577}, {"start": 2577, "end": 2869}, {"start": 2989, "end": 3396}, {"start": 3396, "end": 3531}, {"start": 3531, "end": 3735}, {"start": 3735, "end": 3870}, {"start": 3870, "end": 4229}
+      ]
+    ]
+  }
+];
+
 export default function FocusScreen() {
   const { user } = useAuth();
   const currentUserId = user?.uid || new URLSearchParams(window.location.search).get('userId') || '';
@@ -153,6 +225,43 @@ export default function FocusScreen() {
   const [preloadProgress, setPreloadProgress] = useState({ current: 0, total: 0 });
   const [preloadError, setPreloadError] = useState(null);
 
+  // Voice Previews & Expanded selection states
+  const [voices, setVoices] = useState([
+    // American Female
+    { id: "af_bella", name: "af_bella [Sweet Female]", lang: "en-us" },
+    { id: "af_sarah", name: "af_sarah [Warm Female]", lang: "en-us" },
+    { id: "af_heart", name: "af_heart [Emotional/Sweet]", lang: "en-us" },
+    { id: "af_nicole", name: "af_nicole [Soft Female]", lang: "en-us" },
+    { id: "af_sky", name: "af_sky [Bright Female]", lang: "en-us" },
+    { id: "af_alloy", name: "af_alloy [Balanced Female]", lang: "en-us" },
+    { id: "af_aoede", name: "af_aoede [Expressive Female]", lang: "en-us" },
+    { id: "af_jessica", name: "af_jessica [Sassy Female]", lang: "en-us" },
+    { id: "af_kore", name: "af_kore [Cute Female]", lang: "en-us" },
+    { id: "af_river", name: "af_river [Chill Female]", lang: "en-us" },
+    // American Male
+    { id: "am_adam", name: "am_adam [Deep Male]", lang: "en-us" },
+    { id: "am_michael", name: "am_michael [Standard Male]", lang: "en-us" },
+    { id: "am_echo", name: "am_echo [Clear Male]", lang: "en-us" },
+    { id: "am_eric", name: "am_eric [Conversational Male]", lang: "en-us" },
+    { id: "am_fenrir", name: "am_fenrir [Deep Male]", lang: "en-us" },
+    { id: "am_liam", name: "am_liam [Natural Male]", lang: "en-us" },
+    { id: "am_onyx", name: "am_onyx [Deep/Rich Male]", lang: "en-us" },
+    { id: "am_puck", name: "am_puck [Energetic Male]", lang: "en-us" },
+    // British Female
+    { id: "bf_emma", name: "bf_emma [British Female]", lang: "en-gb" },
+    { id: "bf_isabella", name: "bf_isabella [British Female]", lang: "en-gb" },
+    // British Male
+    { id: "bm_george", name: "bm_george [British Male]", lang: "en-gb" },
+    { id: "bm_lewis", name: "bm_lewis [British Male]", lang: "en-gb" },
+    { id: "bm_daniel", name: "bm_daniel [British Male]", lang: "en-gb" },
+    { id: "bm_fable", name: "bm_fable [British Male]", lang: "en-gb" },
+    // Japanese Female
+    { id: "jf_alpha", name: "jf_alpha [Japanese Female]", lang: "ja" },
+  ]);
+  const [previewingVoice, setPreviewingVoice] = useState(null);
+  const [loadingVoicePreview, setLoadingVoicePreview] = useState(false);
+  const voicePreviewAudioRef = useRef(null);
+
   // Refs for tracking active audio playback, timings, and sync loops
   const activeAudioRef = useRef(null);
   const syncLoopIdRef = useRef(null);
@@ -196,7 +305,7 @@ export default function FocusScreen() {
     };
   }, []);
 
-  // Cleanup preloaded Blob URLs and abort ongoing fetches on unmount
+  // Cleanup preloaded Blob URLs, voice previews, and abort ongoing fetches on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -209,8 +318,138 @@ export default function FocusScreen() {
           }
         });
       }
+      if (voicePreviewAudioRef.current) {
+        voicePreviewAudioRef.current.pause();
+        voicePreviewAudioRef.current = null;
+      }
     };
   }, []);
+
+  // Fetch available voices dynamically from the Hugging Face TTS space on mount
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const BASE = 'https://infernoGurala-rocket-tts.hf.space';
+        const res = await fetch(`${BASE}/api/voices`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setVoices(data);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch available voices from backend. Using static fallbacks.', err);
+      }
+    };
+    fetchVoices();
+  }, []);
+
+  const formatVoiceName = (voice) => {
+    if (!voice || !voice.name) return '';
+    const baseId = voice.id || '';
+    const parts = baseId.split('_');
+    const rawName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : baseId;
+    
+    // Extract description inside brackets
+    let desc = '';
+    const match = voice.name.match(/\[(.+?)\]/);
+    if (match && match[1]) {
+      desc = match[1]
+        .replace('Female', '')
+        .replace('Male', '')
+        .replace('British', '')
+        .trim();
+    }
+    
+    const accent = voice.lang === 'ja' ? 'JP' : (voice.lang === 'en-gb' ? 'UK' : 'US');
+    const isFemale = baseId.startsWith('af_') || baseId.startsWith('bf_') || baseId.startsWith('jf_');
+    const gender = isFemale ? 'Female' : 'Male';
+    const descSuffix = desc ? ` — ${desc}` : '';
+    return `${rawName} (${accent} ${gender}${descSuffix})`;
+  };
+
+  const handlePlayVoicePreview = async (voiceId) => {
+    // If already playing this voice, stop it
+    if (previewingVoice === voiceId) {
+      if (voicePreviewAudioRef.current) {
+        voicePreviewAudioRef.current.pause();
+        voicePreviewAudioRef.current = null;
+      }
+      setPreviewingVoice(null);
+      return;
+    }
+
+    // Stop any existing playing preview
+    if (voicePreviewAudioRef.current) {
+      voicePreviewAudioRef.current.pause();
+      voicePreviewAudioRef.current = null;
+      setPreviewingVoice(null);
+    }
+
+    setLoadingVoicePreview(true);
+    try {
+      // 1. Play static pre-generated audio instantly from local public folder (0ms loading time, works offline!)
+      const audioSrc = `/voices/${voiceId}.wav`;
+      const audio = new Audio(audioSrc);
+      voicePreviewAudioRef.current = audio;
+      setPreviewingVoice(voiceId);
+
+      audio.oncanplaythrough = () => {
+        setLoadingVoicePreview(false);
+        audio.play().catch(e => {
+          console.error("Local audio playback failed:", e);
+          setPreviewingVoice(null);
+        });
+      };
+
+      audio.onended = () => {
+        setPreviewingVoice(null);
+        voicePreviewAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        // Trigger fallback if the static file is missing or fails to load
+        console.warn(`Local static sample /voices/${voiceId}.wav failed. Falling back to dynamic API.`);
+        playDynamicFallback(voiceId);
+      };
+    } catch (err) {
+      console.warn("Error setting up local static playback, trying dynamic fallback:", err);
+      playDynamicFallback(voiceId);
+    }
+  };
+
+  const playDynamicFallback = async (voiceId) => {
+    try {
+      const BASE = 'https://infernoGurala-rocket-tts.hf.space';
+      const res = await fetch(`${BASE}/api/sample?voice=${voiceId}`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      if (data.audio) {
+        const audioSrc = `data:audio/wav;base64,${data.audio}`;
+        const audio = new Audio(audioSrc);
+        voicePreviewAudioRef.current = audio;
+        setPreviewingVoice(voiceId);
+        setLoadingVoicePreview(false);
+        
+        audio.play().catch(e => {
+          console.error("Audio playback failed:", e);
+          setPreviewingVoice(null);
+        });
+
+        audio.onended = () => {
+          setPreviewingVoice(null);
+          voicePreviewAudioRef.current = null;
+        };
+      } else {
+        throw new Error(data.error || 'No audio returned');
+      }
+    } catch (err) {
+      console.error('Failed to play voice preview dynamically:', err);
+      alert('Could not play voice preview. Please check if the TTS server is awake.');
+      setLoadingVoicePreview(false);
+      setPreviewingVoice(null);
+    }
+  };
 
   useEffect(() => {
     const now = new Date();
@@ -269,10 +508,11 @@ export default function FocusScreen() {
         if (tabParam === 'rockets') {
           setActiveTab('rockets');
           const allRockets = await rocketService.getRockets(user?.uid || userIdParam);
-          setRockets(allRockets);
+          const combined = [...LOCAL_SAMPLE_ROCKETS, ...allRockets];
+          setRockets(combined);
           
           if (embeddedParam && rocketIdParam) {
-            const target = allRockets.find(r => r.id === rocketIdParam);
+            const target = combined.find(r => r.id === rocketIdParam);
             if (target) {
               setSelectedRocket(target);
               setRocketsView('player');
@@ -288,7 +528,7 @@ export default function FocusScreen() {
         } else if (user) {
           const allRockets = await rocketService.getRockets(user.uid);
           setActiveTab('rockets');
-          setRockets(allRockets);
+          setRockets([...LOCAL_SAMPLE_ROCKETS, ...allRockets]);
           setRocketsView('list');
           setSelectedRocket(null);
         }
@@ -323,7 +563,7 @@ export default function FocusScreen() {
         );
 
         if (anyFinished) {
-          setRockets(allRockets);
+          setRockets([...LOCAL_SAMPLE_ROCKETS, ...allRockets]);
         }
       } catch (e) {
         console.warn("Silent background rocket status poll failed:", e);
@@ -499,7 +739,7 @@ export default function FocusScreen() {
     try {
       await initFocusSupabase();
       const allRockets = await rocketService.getRockets(currentUserId);
-      setRockets(allRockets);
+      setRockets([...LOCAL_SAMPLE_ROCKETS, ...allRockets]);
     } catch (e) {
       console.warn('Error fetching rockets:', e);
     } finally {
@@ -587,6 +827,10 @@ export default function FocusScreen() {
   };
 
   const handleDeleteRocket = async (rocketId) => {
+    if (rocketId && rocketId.toString().startsWith('local-sample-')) {
+      alert('Cannot delete default premium sample rockets.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this Rocket?')) return;
     try {
       await rocketService.deleteRocket(currentUserId, rocketId);
@@ -673,7 +917,7 @@ export default function FocusScreen() {
 
       // Refresh list to display the newly added placeholder
       const allRockets = await rocketService.getRockets(currentUserId);
-      setRockets(allRockets);
+      setRockets([...LOCAL_SAMPLE_ROCKETS, ...allRockets]);
     } catch (err) {
       console.error(err);
       setRocketErrorMessage(err.message || 'An unexpected error occurred during synthesis.');
@@ -708,16 +952,21 @@ export default function FocusScreen() {
     preloadedAudioUrlsRef.current = [];
 
     const preloaded = new Array(total).fill(null);
+    let completedCount = 0;
 
     try {
-      for (let i = 0; i < total; i++) {
+      // Fetch all slide audio files concurrently in parallel to maximize bandwidth and eliminate serial latency
+      const fetchPromises = slides.map(async (_, i) => {
         if (signal.aborted) return;
 
         const originalUrl = rocket.supabase_audio_urls[i] || rocket.cloudinary_audio_urls[i];
         if (!originalUrl) {
           preloaded[i] = null;
-          setPreloadProgress({ current: i + 1, total });
-          continue;
+          if (!signal.aborted) {
+            completedCount++;
+            setPreloadProgress({ current: completedCount, total });
+          }
+          return;
         }
 
         try {
@@ -734,8 +983,11 @@ export default function FocusScreen() {
         }
 
         if (signal.aborted) return;
-        setPreloadProgress({ current: i + 1, total });
-      }
+        completedCount++;
+        setPreloadProgress({ current: completedCount, total });
+      });
+
+      await Promise.all(fetchPromises);
 
       if (signal.aborted) return;
       preloadedAudioUrlsRef.current = preloaded;
@@ -2235,11 +2487,38 @@ export default function FocusScreen() {
                   </button>
 
                   <div className="card-premium-mono rounded-none p-6 space-y-6">
-                    <div>
-                      <h2 className="text-lg font-serif font-bold italic text-text select-none">
-                        Launch a new Rocket
-                      </h2>
-                      <p className="text-xs text-dim font-sans mt-0.5">Define your reading materials, voice styles, and generate an interactive reader.</p>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-lg font-serif font-bold italic text-text select-none">
+                          Launch a new Rocket
+                        </h2>
+                        <p className="text-xs text-dim font-sans mt-0.5">Define your reading materials, voice styles, and generate an interactive reader.</p>
+                      </div>
+                    </div>
+
+                    {/* Try Instant Samples Section */}
+                    <div className="border border-border/15 p-4 bg-surface/10 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={13} className="text-primary animate-pulse" />
+                        <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-text">Try Instant Samples (No Delay)</span>
+                      </div>
+                      <p className="text-[11px] text-dim font-sans leading-relaxed">Experience zero-latency reading with pre-cached high-quality voices and perfect word alignments.</p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {LOCAL_SAMPLE_ROCKETS.map((sample) => (
+                          <button
+                            key={sample.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedRocket(sample);
+                              setRocketsView('player');
+                              preloadRocketAudios(sample);
+                            }}
+                            className="px-3 py-1.5 bg-surface text-text hover:bg-text hover:text-bg border border-border/40 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-none"
+                          >
+                            ✧ Play {sample.title.split('—')[1].trim()}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {rocketErrorMessage && (
@@ -2249,30 +2528,6 @@ export default function FocusScreen() {
                       </div>
                     )}
 
-                    {rocketGenerating ? (
-                      <div className="py-8 text-center space-y-4 font-sans animate-fadeIn select-none">
-                        <div className="flex justify-center items-center py-6">
-                          <UtopiaLoader />
-                        </div>
-                        <div className="max-w-xs mx-auto space-y-2">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-text">Generating TTS Audio...</h4>
-                          <p className="text-dim text-[11px]">
-                            Sentence {rocketProgress.current} of {rocketProgress.total} (
-                            {Math.round((rocketProgress.current / rocketProgress.total) * 100)}%)
-                          </p>
-                          
-                          {/* Beautiful Progress Bar */}
-                          <div className="h-1.5 w-full bg-surface border border-border/20 rounded-none overflow-hidden mt-2">
-                            <div 
-                              className="h-full bg-[#c8622a] transition-all duration-300"
-                              style={{ width: `${(rocketProgress.current / rocketProgress.total) * 100}%` }}
-                            />
-                          </div>
-                          
-                          <p className="text-dim/80 text-[10px] italic mt-1">Please keep this tab open while generating. This processes speech synthesis and fetches highlights.</p>
-                        </div>
-                      </div>
-                    ) : (
                       <form onSubmit={handleCreateRocket} className="space-y-5 font-sans">
                         <div className="space-y-1">
                           <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Session Title</label>
@@ -2281,7 +2536,8 @@ export default function FocusScreen() {
                             placeholder="e.g. The Art of War - Chapter 1"
                             value={rocketForm.title}
                             onChange={(e) => setRocketForm({ ...rocketForm, title: e.target.value })}
-                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text placeholder-text/30"
+                            disabled={rocketGenerating}
+                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text placeholder-text/30 disabled:opacity-50 disabled:cursor-not-allowed"
                             required
                           />
                         </div>
@@ -2293,7 +2549,8 @@ export default function FocusScreen() {
                             placeholder="Paste your essay, book excerpt, or goals here..."
                             value={rocketForm.rawText}
                             onChange={(e) => setRocketForm({ ...rocketForm, rawText: e.target.value })}
-                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-medium text-text placeholder-text/30 leading-relaxed"
+                            disabled={rocketGenerating}
+                            className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-medium text-text placeholder-text/30 leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                             required
                           />
                         </div>
@@ -2301,17 +2558,38 @@ export default function FocusScreen() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="text-[9px] text-dim uppercase tracking-widest font-bold">Neural Voice</label>
-                            <select
-                              value={rocketForm.voice}
-                              onChange={(e) => setRocketForm({ ...rocketForm, voice: e.target.value })}
-                              className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer"
-                            >
-                              <option value="af_bella">Bella (US Female - Soft)</option>
-                              <option value="af_sarah">Sarah (US Female - Bright)</option>
-                              <option value="am_adam">Adam (US Male - Deep)</option>
-                              <option value="bf_emma">Emma (UK Female - Clear)</option>
-                              <option value="bm_george">George (UK Male - Rich)</option>
-                            </select>
+                            <div className="flex gap-2">
+                              <select
+                                value={rocketForm.voice}
+                                onChange={(e) => setRocketForm({ ...rocketForm, voice: e.target.value })}
+                                disabled={rocketGenerating}
+                                className="flex-1 bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {voices.map((v) => (
+                                  <option key={v.id} value={v.id}>
+                                    {formatVoiceName(v)}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handlePlayVoicePreview(rocketForm.voice)}
+                                disabled={loadingVoicePreview || rocketGenerating}
+                                className={`px-4 py-2 border border-border/40 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 hover:bg-surface/30 cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  previewingVoice === rocketForm.voice
+                                    ? 'bg-primary text-bg border-primary hover:bg-primary/80 animate-pulse'
+                                    : 'bg-surface text-text'
+                                }`}
+                              >
+                                {loadingVoicePreview && previewingVoice === rocketForm.voice ? (
+                                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                ) : previewingVoice === rocketForm.voice ? (
+                                  'Stop'
+                                ) : (
+                                  'Preview'
+                                )}
+                              </button>
+                            </div>
                           </div>
 
                           <div className="space-y-1">
@@ -2319,7 +2597,8 @@ export default function FocusScreen() {
                             <select
                               value={rocketForm.speed.toString()}
                               onChange={(e) => setRocketForm({ ...rocketForm, speed: parseFloat(e.target.value) || 1.0 })}
-                              className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer"
+                              disabled={rocketGenerating}
+                              className="w-full bg-surface/50 border border-border/20 px-3 py-2.5 rounded-none focus:outline-none focus:border-primary text-xs font-semibold text-text cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <option value="0.75">0.75x (Slow focus)</option>
                               <option value="0.9">0.9x (Deliberate)</option>
@@ -2335,19 +2614,30 @@ export default function FocusScreen() {
                           <button 
                             type="button"
                             onClick={() => setRocketsView('list')} 
-                            className="px-3.5 py-1.5 border border-border/20 rounded-none text-xs font-semibold text-sub hover:bg-surface/30 cursor-pointer uppercase tracking-wider"
+                            disabled={rocketGenerating}
+                            className="px-3.5 py-1.5 border border-border/20 rounded-none text-xs font-semibold text-sub hover:bg-surface/30 cursor-pointer uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Cancel
                           </button>
                           <button 
                             type="submit" 
-                            className="px-3.5 py-1.5 bg-text text-bg font-semibold rounded-none text-xs hover:bg-transparent hover:text-text border border-text transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                            disabled={rocketGenerating}
+                            className="px-3.5 py-1.5 bg-text text-bg font-semibold rounded-none text-xs hover:bg-transparent hover:text-text border border-text transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Plus size={12} /> Launch Rocket
+                            {rocketGenerating ? (
+                              <>
+                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                <span>Launching...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus size={12} />
+                                <span>Launch Rocket</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </form>
-                    )}
                   </div>
                 </div>
               )}
