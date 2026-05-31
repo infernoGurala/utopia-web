@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { BookOpen, ClipboardCheck, User, LogOut, Flame } from 'lucide-react';
+import { BookOpen, ClipboardCheck, User, LogOut, Rocket } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function WebLayout() {
@@ -25,7 +25,7 @@ export default function WebLayout() {
         <nav className="flex-1 space-y-2">
           <NavItem to="/app/notes" index="01" label="Notebooks" />
           <NavItem to="/app/attendance" index="02" label="Presence" />
-          <NavItem to="/app/focus" index="03" label="Focus" />
+          <NavItem to="/app/focus" index="03" label="Rockets" />
           <NavItem to="/app/profile" index="04" label="Profile" />
         </nav>
 
@@ -72,7 +72,7 @@ export default function WebLayout() {
       <div className="md:hidden fixed bottom-6 left-6 right-6 glass-pill-premium border px-4 py-3 rounded-full flex justify-around items-center z-50 animate-fadeIn shadow-2xl">
         <MobileNavItem to="/app/notes" icon={<BookOpen size={16} />} label="Notes" />
         <MobileNavItem to="/app/attendance" icon={<ClipboardCheck size={16} />} label="Presence" />
-        <MobileNavItem to="/app/focus" icon={<Flame size={16} />} label="Focus" />
+        <MobileNavItem to="/app/focus" icon={<Rocket size={16} />} label="Rockets" />
         <MobileNavItem to="/app/profile" icon={<User size={16} />} label="Profile" />
       </div>
 
