@@ -11,17 +11,6 @@ import { db } from '../services/firebase';
 import TrashScreen from './TrashScreen';
 import UtopiaLoader from '../components/UtopiaLoader';
 
-const colorPalette = [
-  { bg: 'bg-primary/10', text: 'text-primary', border: 'hover:border-primary/40', accent: 'border-primary/30' },
-  { bg: 'bg-teal/10', text: 'text-teal', border: 'hover:border-teal/40', accent: 'border-teal/30' },
-  { bg: 'bg-peach/10', text: 'text-peach', border: 'hover:border-peach/40', accent: 'border-peach/30' },
-  { bg: 'bg-green/10', text: 'text-green', border: 'hover:border-green/40', accent: 'border-green/30' },
-  { bg: 'bg-blue/10', text: 'text-blue', border: 'hover:border-blue/40', accent: 'border-blue/30' },
-  { bg: 'bg-lavender/10', text: 'text-lavender', border: 'hover:border-lavender/40', accent: 'border-lavender/30' },
-  { bg: 'bg-gold/10', text: 'text-gold', border: 'hover:border-gold/40', accent: 'border-gold/30' },
-  { bg: 'bg-red/10', text: 'text-red', border: 'hover:border-red/40', accent: 'border-red/30' },
-];
-
 export default function NotesScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -383,33 +372,33 @@ export default function NotesScreen() {
   const getIconForItem = (path, name, type) => {
     const override = folderIcons[path];
     if (override) {
-      return getLucideIcon(override, 24);
+      return getLucideIcon(override, 20);
     }
 
     const key = name.toLowerCase();
-    if (key.includes('thermo')) return getLucideIcon('local_fire', 24);
-    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 24);
-    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 24);
-    if (key.includes('chemistry') || key.includes('chem')) return getLucideIcon('science', 24);
-    if (key.includes('economics') || key.includes('econ') || key.includes('manage')) return getLucideIcon('bar_chart', 24);
-    if (key.includes('code') || key.includes('programming') || key.includes('pps') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 24);
-    if (key.includes('iot') || key.includes('sensor') || key.includes('embedded')) return getLucideIcon('sensors', 24);
-    if (key.includes('physics') || key.includes('mechanics') || key.includes('dynamics')) return getLucideIcon('speed', 24);
-    if (key.includes('civil') || key.includes('structure') || key.includes('concrete')) return getLucideIcon('architecture', 24);
-    if (key.includes('lab')) return getLucideIcon('biotech', 24);
-    if (key.includes('design') || key.includes('drawing') || key.includes('cad')) return getLucideIcon('draw', 24);
-    if (key.includes('network') || key.includes('computer network')) return getLucideIcon('lan', 24);
-    if (key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 24);
-    if (key.includes('operating') || key.includes('os')) return getLucideIcon('developer_board', 24);
-    if (key.includes('machine') || key.includes('manufacturing') || key.includes('workshop')) return getLucideIcon('precision_mfg', 24);
-    if (key.includes('english') || key.includes('communication') || key.includes('language')) return getLucideIcon('language', 24);
-    if (key.includes('exam') || key.includes('prep') || key.includes('question') || key.includes('bank')) return getLucideIcon('quiz', 24);
-    if (key.includes('archive')) return getLucideIcon('archive', 24);
-    if (key.includes('doc')) return getLucideIcon('school', 24);
-    if (key.includes('sem')) return getLucideIcon('bookmark', 24);
-    if (key.includes('unit')) return getLucideIcon('topic', 24);
+    if (key.includes('thermo')) return getLucideIcon('local_fire', 20);
+    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 20);
+    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 20);
+    if (key.includes('chemistry') || key.includes('chem')) return getLucideIcon('science', 20);
+    if (key.includes('economics') || key.includes('econ') || key.includes('manage')) return getLucideIcon('bar_chart', 20);
+    if (key.includes('code') || key.includes('programming') || key.includes('pps') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 20);
+    if (key.includes('iot') || key.includes('sensor') || key.includes('embedded')) return getLucideIcon('sensors', 20);
+    if (key.includes('physics') || key.includes('mechanics') || key.includes('dynamics')) return getLucideIcon('speed', 20);
+    if (key.includes('civil') || key.includes('structure') || key.includes('concrete')) return getLucideIcon('architecture', 20);
+    if (key.includes('lab')) return getLucideIcon('biotech', 20);
+    if (key.includes('design') || key.includes('drawing') || key.includes('cad')) return getLucideIcon('draw', 20);
+    if (key.includes('network') || key.includes('computer network')) return getLucideIcon('lan', 20);
+    if (key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 20);
+    if (key.includes('operating') || key.includes('os')) return getLucideIcon('developer_board', 20);
+    if (key.includes('machine') || key.includes('manufacturing') || key.includes('workshop')) return getLucideIcon('precision_mfg', 20);
+    if (key.includes('english') || key.includes('communication') || key.includes('language')) return getLucideIcon('language', 20);
+    if (key.includes('exam') || key.includes('prep') || key.includes('question') || key.includes('bank')) return getLucideIcon('quiz', 20);
+    if (key.includes('archive')) return getLucideIcon('archive', 20);
+    if (key.includes('doc')) return getLucideIcon('school', 20);
+    if (key.includes('sem')) return getLucideIcon('bookmark', 20);
+    if (key.includes('unit')) return getLucideIcon('topic', 20);
 
-    return type === 'file' ? <FileText size={24} /> : <Folder size={24} />;
+    return type === 'file' ? <FileText size={20} /> : <Folder size={20} />;
   };
 
   const formatDisplayName = (name) => {
@@ -419,34 +408,31 @@ export default function NotesScreen() {
 
   const getRoleInfo = (cls) => {
     if (cls.creatorUid === user.uid) {
-      return { label: 'Admin', icon: <Crown size={12} />, style: 'bg-text text-bg border border-text' };
+      return { label: 'Admin', icon: <Crown size={12} />, style: 'bg-text text-bg font-medium' };
     }
     if (cls.role === 'writer') {
-      return { label: 'Writer', icon: <Pen size={12} />, style: 'border border-text text-text font-semibold' };
+      return { label: 'Writer', icon: <Pen size={12} />, style: 'border border-text text-text font-medium' };
     }
-    return { label: 'Reader', icon: <Eye size={12} />, style: 'border border-border/60 text-dim' };
+    return { label: 'Reader', icon: <Eye size={12} />, style: 'border border-border text-sub' };
   };
 
   return (
-    <div className="max-w-5xl">
-      {/* Dynamic Header */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="max-w-5xl font-sans">
+      {/* Header */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-2 select-none">
-            <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-2">Note</span>
-            <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">books</span>
-          </h1>
+          <h1 className="text-2xl font-bold text-text mb-1 select-none">Notebooks</h1>
           
           {activeTab === 'community' ? (
-            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-sub text-[15px] md:text-[17px]">
+            <div className="flex flex-wrap items-center gap-1.5 text-sub text-sm">
               {pathHistory.map((path, idx) => {
                 const displayName = idx === 0 
                   ? formatDisplayName(userProfile?.selectedUniversityId || 'University')
                   : formatDisplayName(path.split('/').pop());
 
                 return (
-                  <span key={idx} className="flex items-center gap-1.5 md:gap-2">
-                    {idx > 0 && <ChevronRight size={16} className="text-dim" />}
+                  <span key={idx} className="flex items-center gap-1.5">
+                    {idx > 0 && <ChevronRight size={14} className="text-dim" />}
                     <button 
                       onClick={() => {
                         const newHistory = pathHistory.slice(0, idx + 1);
@@ -454,7 +440,7 @@ export default function NotesScreen() {
                         setCurrentPath(path);
                         setSearchParams({ tab: activeTab, folder: path });
                       }} 
-                      className="hover:text-primary transition-colors truncate max-w-[120px] md:max-w-[150px] font-medium"
+                      className="hover:text-text transition-colors truncate max-w-[150px] font-medium"
                     >
                       {displayName}
                     </button>
@@ -463,16 +449,16 @@ export default function NotesScreen() {
               })}
             </div>
           ) : (
-            <p className="text-sub text-[15px] md:text-[17px]">Access your enrolled courses and view class-specific notes.</p>
+            <p className="text-sub text-sm">Access your enrolled courses and view class-specific notes.</p>
           )}
         </div>
         
         {/* Actions Menu */}
-        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
           {activeTab === 'community' && pathHistory.length > 1 && (
-            <button onClick={goBack} className="flex shrink-0 items-center gap-1 md:gap-2 text-text hover:bg-surface/50 px-3 md:px-4 py-2 rounded-none border border-border/40 transition-colors font-medium text-xs uppercase tracking-wider">
-              <ArrowLeft size={16} />
-              <span className="hidden md:inline">Back</span>
+            <button onClick={goBack} className="flex items-center gap-1 text-text hover:bg-surface px-3 py-1.5 rounded border border-border text-xs font-medium transition-colors">
+              <ArrowLeft size={14} />
+              <span>Back</span>
             </button>
           )}
 
@@ -480,7 +466,7 @@ export default function NotesScreen() {
             <button 
               onClick={loadClasses} 
               disabled={classesLoading}
-              className="flex shrink-0 items-center bg-surface hover:bg-border/20 text-text px-4 py-2 rounded-none font-medium transition-colors border border-border/50 text-xs uppercase tracking-wider"
+              className="flex items-center bg-surface hover:bg-border/30 text-text px-3 py-1.5 rounded text-xs font-medium transition-colors border border-border"
             >
               {classesLoading ? 'Loading...' : 'Refresh'}
             </button>
@@ -490,13 +476,13 @@ export default function NotesScreen() {
           {activeTab === 'community' && (
             <button 
               onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-none font-medium transition-all duration-300 text-xs uppercase tracking-wider ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 isEditMode 
                   ? 'bg-text text-bg' 
-                  : 'bg-surface hover:bg-border/20 text-text border border-border/50'
+                  : 'bg-surface hover:bg-border/30 text-text border border-border'
               }`}
             >
-              {isEditMode ? <Check size={16} /> : <Pencil size={16} />}
+              {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
               <span>{isEditMode ? 'Done' : 'Edit'}</span>
             </button>
           )}
@@ -506,69 +492,66 @@ export default function NotesScreen() {
             <>
               <button 
                 onClick={() => setShowTrash(true)} 
-                className="flex shrink-0 items-center gap-1 md:gap-2 text-dim hover:text-text hover:bg-surface px-3 md:px-4 py-2 rounded-none transition-colors font-medium border border-border/50 text-xs uppercase tracking-wider"
+                className="flex items-center gap-1 text-sub hover:text-text hover:bg-surface px-3 py-1.5 rounded text-xs font-medium border border-border transition-colors"
               >
-                <Trash2 size={16} />
-                <span className="hidden md:inline">Trash</span>
+                <Trash2 size={14} />
+                <span>Trash</span>
               </button>
-              <button onClick={handleCreateFolder} className="flex shrink-0 items-center gap-1 md:gap-2 bg-surface hover:bg-border/20 text-text px-3 md:px-4 py-2 rounded-none font-medium transition-colors border border-border/50 text-xs uppercase tracking-wider">
-                <Plus size={16} /> <span className="hidden md:inline">Folder</span>
+              <button onClick={handleCreateFolder} className="flex items-center gap-1 bg-surface hover:bg-border/30 text-text px-3 py-1.5 rounded text-xs font-medium border border-border transition-colors">
+                <Plus size={14} /> <span>Folder</span>
               </button>
-              <button onClick={handleCreateNote} className="flex shrink-0 items-center gap-1 md:gap-2 bg-text text-bg px-3 md:px-4 py-2 rounded-none font-medium transition-colors text-xs uppercase tracking-wider">
-                <Plus size={16} /> <span className="hidden md:inline">Note</span>
+              <button onClick={handleCreateNote} className="flex items-center gap-1 bg-text text-bg px-3 py-1.5 rounded text-xs font-medium transition-colors">
+                <Plus size={14} /> <span>Note</span>
               </button>
             </>
           )}
         </div>
       </div>
 
-      {/* Clean segmented tab selector */}
-      <div className="flex bg-surface border border-border p-0.5 rounded-none max-w-xs mb-6 select-none font-sans">
+      {/* Tabs */}
+      <div className="flex border-b border-border mb-6">
         <button
           onClick={() => handleTabChange('community')}
-          className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-colors cursor-pointer ${
+          className={`pb-2.5 px-4 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
             activeTab === 'community'
-              ? 'bg-text text-bg'
-              : 'text-sub hover:text-text hover:bg-surface/30'
+              ? 'border-text text-text'
+              : 'border-transparent text-sub hover:text-text'
           }`}
         >
           Community
         </button>
         <button
           onClick={() => handleTabChange('classes')}
-          className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-colors cursor-pointer ${
+          className={`pb-2.5 px-4 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
             activeTab === 'classes'
-              ? 'bg-text text-bg'
-              : 'text-sub hover:text-text hover:bg-surface/30'
+              ? 'border-text text-text'
+              : 'border-transparent text-sub hover:text-text'
           }`}
         >
           Classes
         </button>
       </div>
 
-
-
-      {/* Active Tab Screen Area */}
+      {/* Active Tab Content */}
       <div>
         {activeTab === 'community' ? (
           <div>
             {error && (
-              <div className="mb-6 p-4 bg-red/10 text-red rounded-2xl border border-red/20 flex items-start gap-3">
-                <div className="mt-0.5"><Folder size={18} /></div>
-                <div>{error}</div>
+              <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm">
+                {error}
               </div>
             )}
 
             {loading ? (
-              <div className="flex justify-center py-20 select-none">
+              <div className="flex justify-center py-16">
                 <UtopiaLoader />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {items.filter(item => 
                   formatDisplayName(item.name).toLowerCase().includes(searchQuery.toLowerCase())
                 ).length === 0 ? (
-                  <div className="col-span-full py-20 text-center text-dim bg-surface/20 border border-border/30 rounded-3xl border-dashed">
+                  <div className="col-span-full py-12 text-center text-sub bg-surface/40 border border-border rounded">
                     {searchQuery ? "No matching folders or notes found." : "This folder is empty."}
                   </div>
                 ) : (
@@ -579,24 +562,24 @@ export default function NotesScreen() {
                       <div 
                         key={item.path || idx}
                         onClick={() => navigateTo(item)}
-                        className="card-premium-mono rounded-none p-5 flex items-center gap-4 cursor-pointer group"
+                        className="card-premium-mono rounded p-4 flex items-center gap-3 cursor-pointer group"
                       >
-                        <div className="w-12 h-12 rounded-none flex items-center justify-center bg-surface border border-border/40 text-text">
+                        <div className="w-9 h-9 rounded flex items-center justify-center bg-surface border border-border text-text shrink-0">
                           {getIconForItem(item.path, item.name, item.type)}
                         </div>
-                        <div className="flex-1 min-w-0 flex items-center h-full">
-                          <h3 className="text-text font-sans font-medium tracking-tight truncate text-[15px]">{formatDisplayName(item.name)}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-text font-medium text-sm truncate">{formatDisplayName(item.name)}</h3>
                         </div>
                         
                         {isEditMode && (
-                          <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {item.type === 'file' && (
-                              <button onClick={(e) => handleRename(e, item)} className="p-1.5 text-dim hover:text-text hover:bg-surface rounded-none cursor-pointer">
-                                <Edit2 size={13} />
+                              <button onClick={(e) => handleRename(e, item)} className="p-1 text-sub hover:text-text rounded cursor-pointer">
+                                <Edit2 size={14} />
                               </button>
                             )}
-                            <button onClick={(e) => handleDelete(e, item)} className="p-1.5 text-dim hover:text-text hover:bg-surface rounded-none cursor-pointer">
-                              <Trash2 size={13} />
+                            <button onClick={(e) => handleDelete(e, item)} className="p-1 text-sub hover:text-text rounded cursor-pointer">
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         )}
@@ -610,79 +593,78 @@ export default function NotesScreen() {
         ) : (
           <div>
             {classesError && (
-              <div className="mb-6 p-4 bg-red/10 text-red rounded-2xl border border-red/20 flex items-start gap-3">
-                <div>{classesError}</div>
-                <button onClick={loadClasses} className="ml-auto text-sm font-medium underline">Retry</button>
+              <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm flex items-center justify-between">
+                <span>{classesError}</span>
+                <button onClick={loadClasses} className="text-xs font-semibold underline">Retry</button>
               </div>
             )}
 
             {classesLoading ? (
-              <div className="flex justify-center py-20 select-none">
+              <div className="flex justify-center py-16">
                 <UtopiaLoader />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 
-                {/* Join Class Inline Card */}
-                <div className="card-premium-mono rounded-none p-6 flex flex-col justify-between relative overflow-hidden group min-h-[220px]">
+                {/* Join Class Card */}
+                <div className="card-premium-mono rounded p-5 flex flex-col justify-between space-y-4">
                   <div>
-                    <div className="w-12 h-12 bg-surface text-text rounded-none flex items-center justify-center mb-4 border border-border/40">
-                      <Plus size={20} />
+                    <div className="w-9 h-9 bg-surface text-text rounded flex items-center justify-center mb-3 border border-border">
+                      <Plus size={18} />
                     </div>
-                    <h3 className="tracking-tight mb-1 select-none">
-                      <span className="font-sans font-black uppercase text-sm tracking-widest text-text mr-1.5">Join New</span>
-                      <span className="font-serif font-light italic text-base text-dim lowercase">class</span>
-                    </h3>
-                    <p className="text-dim text-[10px] leading-relaxed mb-4 font-medium tracking-wide">Enter a class code to join the course and view class notes.</p>
+                    <h3 className="font-semibold text-text text-sm mb-1">Join a Class</h3>
+                    <p className="text-sub text-xs">Enter a class code to enroll in a course.</p>
                   </div>
-                  <form onSubmit={handleJoinClass} className="space-y-2 relative z-10">
+                  <form onSubmit={handleJoinClass} className="space-y-2">
                     <input 
                       type="text"
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value)}
                       placeholder="Class Code (e.g. AB12CD)"
-                      className="w-full bg-transparent border border-border/50 focus:border-text px-3.5 py-2.5 rounded-none text-xs font-semibold text-text focus:outline-none transition-all uppercase tracking-wider"
+                      className="w-full bg-transparent border border-border focus:border-text px-3 py-1.5 rounded text-xs text-text focus:outline-none transition-colors uppercase tracking-wider"
                     />
                     <button 
                       type="submit" 
                       disabled={isJoining}
-                      className="w-full py-2.5 btn-premium-mono rounded-none cursor-pointer"
+                      className="w-full py-1.5 btn-premium-mono rounded cursor-pointer text-xs"
                     >
                       {isJoining ? 'Joining...' : 'Join Class'}
                     </button>
-                    {joinError && <p className="text-text text-[9px] font-semibold mt-1 tracking-wider uppercase">{joinError}</p>}
-                    {joinSuccess && <p className="text-text text-[9px] font-semibold mt-1 tracking-wider uppercase">{joinSuccess}</p>}
+                    {joinError && <p className="text-red text-xs mt-1">{joinError}</p>}
+                    {joinSuccess && <p className="text-green text-xs mt-1">{joinSuccess}</p>}
                   </form>
                 </div>
 
                 {classes.filter(cls => 
                   (cls.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                   (cls.classCode || '').toLowerCase().includes(searchQuery.toLowerCase())
-                ).map((cls, idx) => {
+                ).map((cls) => {
                   const roleInfo = getRoleInfo(cls);
 
                   return (
                     <div 
                       key={cls.id} 
                       onClick={() => navigate(`/app/class-notes?classId=${cls.id}&className=${encodeURIComponent(cls.name)}`)}
-                      className="card-premium-mono rounded-none p-6 cursor-pointer group"
+                      className="card-premium-mono rounded p-5 cursor-pointer group flex flex-col justify-between"
                     >
-                      <div className="w-12 h-12 bg-surface text-text rounded-none flex items-center justify-center mb-4 border border-border/40">
-                        <span className="font-sans font-medium text-lg">{(cls.classCode || cls.name?.[0] || 'C').charAt(0)}</span>
+                      <div>
+                        <div className="w-9 h-9 bg-surface text-text rounded flex items-center justify-center mb-3 border border-border font-medium text-sm">
+                          {(cls.classCode || cls.name?.[0] || 'C').charAt(0)}
+                        </div>
+                        <h3 className="text-text font-semibold text-sm mb-1 truncate">
+                          {cls.name || 'Unnamed Class'}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-sub text-xs mb-3">
+                          <Users size={12} />
+                          <span>{cls.memberCount || 0} members</span>
+                        </div>
                       </div>
-                      <h3 className="text-text font-sans font-medium text-sm md:text-[15px] tracking-tight mb-1 truncate uppercase leading-snug">
-                        {cls.name || 'Unnamed Class'}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-dim text-xs mb-4 font-medium tracking-wide">
-                        <Users size={12} />
-                        <span>{cls.memberCount || 0} members</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider rounded-none ${roleInfo.style}`}>
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded ${roleInfo.style}`}>
                           {roleInfo.icon}
                           {roleInfo.label}
                         </span>
-                        <ChevronRight size={13} className="text-dim group-hover:translate-x-0.5 transition-transform" />
+                        <ChevronRight size={14} className="text-dim group-hover:translate-x-0.5 transition-transform" />
                       </div>
                     </div>
                   );

@@ -1,42 +1,37 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { BookOpen, ClipboardCheck, User, LogOut, Rocket } from 'lucide-react';
+import { BookOpen, User, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function WebLayout() {
   const { signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col md:flex-row relative font-sans">
+    <div className="min-h-screen bg-bg flex flex-col md:flex-row font-sans">
       
-      {/* Desktop Sidebar - Premium Gallery Guide Aesthetic */}
-      <aside className="hidden md:flex md:w-64 bg-surface border-r border-border/80 flex-col p-6 shrink-0 h-screen sticky top-0">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex md:w-60 bg-surface border-r border-border flex-col p-5 shrink-0 h-screen sticky top-0">
         
         {/* Brand Header */}
-        <div className="mb-14 px-2 select-none">
-          <h1 className="text-3xl font-serif font-light text-text uppercase tracking-tighter leading-none">
+        <div className="mb-8 px-2 select-none">
+          <h1 className="text-xl font-bold font-sans text-text">
             Utopia
           </h1>
-          <span className="editorial-text-spaced text-dim text-[8px] tracking-[0.3em] block mt-1">
-            ACADEMIA DOCK
-          </span>
         </div>
 
-        {/* Index Navigation */}
-        <nav className="flex-1 space-y-2">
-          <NavItem to="/app/notes" index="01" label="Notebooks" />
-          <NavItem to="/app/attendance" index="02" label="Presence" />
-          <NavItem to="/app/focus" index="03" label="Rockets" />
-          <NavItem to="/app/profile" index="04" label="Profile" />
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1">
+          <NavItem to="/app/notes" icon={<BookOpen size={18} />} label="Notebooks" />
+          <NavItem to="/app/profile" icon={<User size={18} />} label="Profile" />
         </nav>
 
         {/* Bottom User Area */}
-        <div className="pt-4 border-t border-border/40">
+        <div className="pt-4 border-t border-border">
           <button 
             onClick={signOut}
-            className="flex w-full items-center justify-between px-4 py-3 bg-transparent border border-border/30 hover:border-text hover:bg-text hover:text-bg text-text transition-all duration-200 cursor-pointer font-sans"
+            className="flex w-full items-center justify-between px-3 py-2 text-sm text-sub hover:text-text hover:bg-bg rounded transition-colors cursor-pointer"
           >
-            <span className="editorial-text-spaced text-[9px] tracking-[0.2em] font-medium transition-colors">Sign Out</span>
-            <LogOut size={13} className="shrink-0" />
+            <span>Sign Out</span>
+            <LogOut size={16} />
           </button>
         </div>
 
@@ -46,73 +41,65 @@ export default function WebLayout() {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between px-6 py-4 bg-surface border-b border-border/60">
-          <div>
-            <h1 className="text-xl font-serif font-light text-text uppercase tracking-tighter">
-              Utopia
-            </h1>
-            <span className="text-[7px] tracking-[0.25em] text-dim block uppercase font-light font-sans">
-              Academia
-            </span>
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-surface border-b border-border">
+          <h1 className="text-lg font-bold font-sans text-text">
+            Utopia
+          </h1>
+          <div className="flex items-center gap-3">
+            <nav className="flex items-center gap-2">
+              <NavLink 
+                to="/app/notes" 
+                className={({ isActive }) => 
+                  `px-2.5 py-1 text-sm rounded transition-colors ${
+                    isActive ? 'bg-text text-bg font-medium' : 'text-sub hover:text-text'
+                  }`
+                }
+              >
+                Notes
+              </NavLink>
+              <NavLink 
+                to="/app/profile" 
+                className={({ isActive }) => 
+                  `px-2.5 py-1 text-sm rounded transition-colors ${
+                    isActive ? 'bg-text text-bg font-medium' : 'text-sub hover:text-text'
+                  }`
+                }
+              >
+                Profile
+              </NavLink>
+            </nav>
+            <button onClick={signOut} className="p-1.5 text-sub hover:text-text rounded transition-colors cursor-pointer" title="Sign Out">
+              <LogOut size={16} />
+            </button>
           </div>
-          <button onClick={signOut} className="p-2 text-text hover:bg-text hover:text-bg border border-border/30 rounded-lg transition-all cursor-pointer">
-            <LogOut size={13} />
-          </button>
         </header>
 
         {/* Main Content Container */}
-        <main className="flex-1 p-5 md:p-8 lg:p-12 overflow-y-auto pb-28 md:pb-12">
-          <div className="max-w-4xl mx-auto animate-fadeIn">
+        <main className="flex-1 p-5 md:p-8 overflow-y-auto">
+          <div className="max-w-4xl mx-auto">
             <Outlet />
           </div>
         </main>
-      </div>
-
-      {/* Premium Floating Bottom Navigation Dock (Mobile) */}
-      <div className="md:hidden fixed bottom-6 left-6 right-6 glass-pill-premium border px-4 py-3 rounded-full flex justify-around items-center z-50 animate-fadeIn shadow-2xl">
-        <MobileNavItem to="/app/notes" icon={<BookOpen size={16} />} label="Notes" />
-        <MobileNavItem to="/app/attendance" icon={<ClipboardCheck size={16} />} label="Presence" />
-        <MobileNavItem to="/app/focus" icon={<Rocket size={16} />} label="Rockets" />
-        <MobileNavItem to="/app/profile" icon={<User size={16} />} label="Profile" />
       </div>
 
     </div>
   );
 }
 
-function NavItem({ to, index, label }) {
+function NavItem({ to, icon, label }) {
   return (
     <NavLink 
       to={to} 
       className={({ isActive }) => 
-        `flex items-center gap-4 px-4 py-3.5 transition-all duration-200 cursor-pointer ${
+        `flex items-center gap-3 px-3 py-2 text-sm rounded transition-colors cursor-pointer ${
           isActive 
-            ? 'bg-text text-bg font-semibold' 
-            : 'text-sub hover:text-text hover:bg-bg/40'
+            ? 'bg-text text-bg font-medium' 
+            : 'text-sub hover:text-text hover:bg-bg/60'
         }`
       }
     >
-      <span className="font-mono text-[9px] opacity-40 tracking-normal">{index} //</span>
-      <span className="editorial-text-spaced text-[10px] tracking-[0.2em]">{label}</span>
-    </NavLink>
-  );
-}
-
-function MobileNavItem({ to, icon, label }) {
-  return (
-    <NavLink 
-      to={to} 
-      className="relative flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-colors cursor-pointer"
-    >
-      {({ isActive }) => (
-        <>
-          <div className={`mb-1 transition-colors ${isActive ? 'text-text scale-110' : 'text-dim'}`}>{icon}</div>
-          <span className={`text-[8px] tracking-[0.1em] uppercase transition-colors ${isActive ? 'text-text font-semibold' : 'text-dim'}`}>{label}</span>
-          {isActive && (
-            <span className="absolute -bottom-1.5 w-1.5 h-1.5 rounded-full bg-text animate-fadeIn" />
-          )}
-        </>
-      )}
+      {icon}
+      <span>{label}</span>
     </NavLink>
   );
 }

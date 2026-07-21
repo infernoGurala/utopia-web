@@ -3,14 +3,10 @@ import AuthProvider, { useAuth } from './contexts/AuthContext';
 import ThemeProvider from './contexts/ThemeContext';
 import LoginScreen from './screens/LoginScreen';
 import WebLayout from './components/WebLayout';
-import AttendanceScreen from './screens/AttendanceScreen';
 import NotesScreen from './screens/NotesScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import NoteEditorScreen from './screens/NoteEditorScreen';
 import ClassNotesScreen from './screens/ClassNotesScreen';
-import FocusScreen from './screens/FocusScreen';
-import HabitsScreen from './screens/HabitsScreen';
-import CalendarScreen from './screens/CalendarScreen';
 import UtopiaLoader from './components/UtopiaLoader';
 
 function ProtectedRoute({ children }) {
@@ -46,15 +42,11 @@ function App() {
                 </ProtectedRoute>
               } 
             >
-              <Route index element={<Navigate to="focus" replace />} />
+              <Route index element={<Navigate to="notes" replace />} />
               <Route path="notes" element={<NotesScreen />} />
               <Route path="class-notes" element={<ClassNotesScreen />} />
-              <Route path="attendance" element={<AttendanceScreen />} />
-              <Route path="habits" element={<HabitsScreen />} />
-              <Route path="calendar" element={<CalendarScreen />} />
               <Route path="profile" element={<ProfileScreen />} />
               <Route path="note" element={<NoteEditorScreen />} />
-              <Route path="focus" element={<FocusScreen />} />
             </Route>
             <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>

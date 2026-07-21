@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trash2, RotateCcw, AlertTriangle, Folder, FileText, Clock, User, X } from 'lucide-react';
 import { TrashService } from '../services/TrashService';
+import UtopiaLoader from '../components/UtopiaLoader';
 
 export default function TrashScreen({ universityId, onClose, onRestored }) {
   const [items, setItems] = useState([]);
@@ -75,49 +76,47 @@ export default function TrashScreen({ universityId, onClose, onRestored }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/70 backdrop-blur-sm p-4">
-      <div className="glass-premium rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 p-4 font-sans">
+      <div className="bg-card border border-border rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border/40">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red/10 rounded-xl flex items-center justify-center text-red">
-              <Trash2 size={20} />
-            </div>
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <Trash2 size={18} className="text-red" />
             <div>
-              <h2 className="text-xl font-bold text-text">Trash</h2>
-              <p className="text-sm text-sub">Items are auto-deleted after 30 days</p>
+              <h2 className="text-base font-bold text-text">Trash</h2>
+              <p className="text-xs text-sub">Items are auto-deleted after 30 days</p>
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 text-dim hover:text-text hover:bg-surface rounded-xl transition-colors"
+            className="p-1 text-sub hover:text-text rounded transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red/10 text-red rounded-xl border border-red/20 text-sm flex items-center gap-2">
-            <AlertTriangle size={16} />
+          <div className="mx-4 mt-3 p-2.5 bg-red/10 text-red rounded border border-red/20 text-xs flex items-center gap-2">
+            <AlertTriangle size={14} />
             {error}
           </div>
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex justify-center py-12">
+              <UtopiaLoader />
             </div>
           ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Trash2 size={48} className="text-dim mb-4" />
-              <p className="text-sub font-medium text-lg">Trash is empty</p>
-              <p className="text-dim text-sm mt-1">Deleted items will appear here</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Trash2 size={36} className="text-dim mb-3" />
+              <p className="text-text font-medium text-sm">Trash is empty</p>
+              <p className="text-sub text-xs mt-0.5">Deleted items will appear here</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {items.map((item) => {
                 const daysLeft = trashService.daysRemaining(item.permanentDeleteAt);
                 const isProcessing = processing === item.id;
@@ -125,50 +124,50 @@ export default function TrashScreen({ universityId, onClose, onRestored }) {
                 return (
                   <div 
                     key={item.id} 
-                    className={`glass-premium rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+                    className={`card-premium-mono rounded p-3 flex items-center gap-3 transition-opacity ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
                   >
                     {/* Icon */}
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
-                      {item.type === 'dir' ? <Folder size={20} /> : <FileText size={20} />}
+                    <div className="w-8 h-8 bg-surface rounded flex items-center justify-center text-text shrink-0 border border-border">
+                      {item.type === 'dir' ? <Folder size={16} /> : <FileText size={16} />}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-text font-medium truncate">{item.name?.replace(/\.md$/i, '')}</h3>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-dim">
+                      <h3 className="text-text font-medium text-xs truncate">{item.name?.replace(/\.md$/i, '')}</h3>
+                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-sub">
                         <span className="flex items-center gap-1">
-                          <Clock size={11} />
+                          <Clock size={10} />
                           {formatRelativeTime(item.deletedAt)}
                         </span>
                         {item.deletedByName && (
                           <span className="flex items-center gap-1">
-                            <User size={11} />
+                            <User size={10} />
                             {item.deletedByName}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-red font-semibold mt-1">
+                      <p className="text-[11px] text-red font-medium mt-0.5">
                         Auto-deletes in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
                       </p>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleRestore(item)}
                         disabled={isProcessing}
-                        className="p-2 text-green hover:bg-green/10 rounded-xl transition-colors"
+                        className="p-1.5 text-sub hover:text-green hover:bg-surface rounded transition-colors"
                         title="Restore"
                       >
-                        <RotateCcw size={18} />
+                        <RotateCcw size={16} />
                       </button>
                       <button
                         onClick={() => handlePermanentDelete(item)}
                         disabled={isProcessing}
-                        className="p-2 text-red hover:bg-red/10 rounded-xl transition-colors"
+                        className="p-1.5 text-sub hover:text-red hover:bg-surface rounded transition-colors"
                         title="Delete permanently"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>

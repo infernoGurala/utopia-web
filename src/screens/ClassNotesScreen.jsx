@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
-import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, Users, Settings } from 'lucide-react';
+import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getLucideIcon } from '../utils/IconMap';
 import { useTheme } from '../contexts/ThemeContext';
@@ -17,14 +17,7 @@ export default function ClassNotesScreen() {
 
   const classId = searchParams.get('classId') || '';
   const classNameParam = searchParams.get('className') || 'Class';
-  const className = classData?.name || classNameParam;
-
-  const universityFolder = userProfile?.selectedUniversityId || '';
-
-  // The root path for class notes: {university}/{classId}/Notes/
-  const rootPath = universityFolder ? `${universityFolder}/${classId}/Notes` : '';
-  const latestFetchedPath = useRef('');
-
+  
   const [items, setItems] = useState([]);
   const [folderIcons, setFolderIcons] = useState({});
   const [loading, setLoading] = useState(true);
@@ -32,6 +25,13 @@ export default function ClassNotesScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [ownerName, setOwnerName] = useState('');
   const [classData, setClassData] = useState(null);
+
+  const className = classData?.name || classNameParam;
+  const universityFolder = userProfile?.selectedUniversityId || '';
+
+  // Root path for class notes: {university}/{classId}/Notes/
+  const rootPath = universityFolder ? `${universityFolder}/${classId}/Notes` : '';
+  const latestFetchedPath = useRef('');
 
   const [currentPath, setCurrentPath] = useState(rootPath);
   const [pathHistory, setPathHistory] = useState([rootPath]);
@@ -43,7 +43,6 @@ export default function ClassNotesScreen() {
       const folderParam = searchParams.get('folder');
       if (folderParam && folderParam.startsWith(newRoot)) {
         setCurrentPath(folderParam);
-        // Reconstruct pathHistory from newRoot to folderParam
         const suffix = folderParam.substring(newRoot.length);
         const parts = suffix.split('/').filter(Boolean);
         const history = [newRoot];
@@ -80,7 +79,6 @@ export default function ClassNotesScreen() {
       if (classDoc.exists()) {
         const data = classDoc.data();
         setClassData(data);
-        // Fetch owner name
         if (data.creatorUid) {
           const ownerDoc = await getDoc(doc(db, 'users', data.creatorUid));
           if (ownerDoc.exists()) {
@@ -200,25 +198,20 @@ export default function ClassNotesScreen() {
     }
   };
 
-  const colorPalette = [
-    { bg: 'bg-surface border border-border/30', text: 'text-text', border: 'hover:border-text' },
-    { bg: 'bg-transparent border border-border/60', text: 'text-text', border: 'hover:border-text' },
-  ];
-
   const getIconForItem = (path, name, type) => {
     const override = folderIcons[path];
-    if (override) return getLucideIcon(override, 24);
+    if (override) return getLucideIcon(override, 20);
 
     const key = name.toLowerCase();
-    if (key.includes('doc') || key.includes('note')) return getLucideIcon('article', 24);
-    if (key.includes('assign')) return getLucideIcon('assignment', 24);
-    if (key.includes('quiz') || key.includes('test')) return getLucideIcon('quiz', 24);
-    if (key.includes('unit')) return getLucideIcon('topic', 24);
-    if (key.includes('sem')) return getLucideIcon('bookmark', 24);
-    if (key.includes('lab')) return getLucideIcon('biotech', 24);
-    if (key.includes('exam') || key.includes('prep')) return getLucideIcon('quiz', 24);
+    if (key.includes('doc') || key.includes('note')) return getLucideIcon('article', 20);
+    if (key.includes('assign')) return getLucideIcon('assignment', 20);
+    if (key.includes('quiz') || key.includes('test')) return getLucideIcon('quiz', 20);
+    if (key.includes('unit')) return getLucideIcon('topic', 20);
+    if (key.includes('sem')) return getLucideIcon('bookmark', 20);
+    if (key.includes('lab')) return getLucideIcon('biotech', 20);
+    if (key.includes('exam') || key.includes('prep')) return getLucideIcon('quiz', 20);
 
-    return type === 'file' ? <FileText size={24} /> : <Folder size={24} />;
+    return type === 'file' ? <FileText size={20} /> : <Folder size={20} />;
   };
 
   const formatDisplayName = (name) => {
@@ -236,58 +229,51 @@ export default function ClassNotesScreen() {
   };
 
   return (
-    <div className="max-w-5xl">
-      {/* Class Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="max-w-5xl font-sans">
+      {/* Header */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <button onClick={() => navigate('/app/notes?tab=classes')} className="p-2 text-dim hover:text-text hover:bg-surface/50 rounded-xl transition-colors">
+          <div className="flex items-center gap-3 mb-2">
+            <button onClick={() => navigate('/app/notes?tab=classes')} className="p-1.5 text-sub hover:text-text hover:bg-surface rounded transition-colors" title="Back to Classes">
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-3xl md:text-4xl tracking-tight leading-none mb-1 select-none">
-                <span className="font-serif font-light uppercase text-2xl md:text-3xl tracking-tight mr-1.5">
-                  {className.split(' ')[0] || ''}
-                </span>
-                {className.substring((className.split(' ')[0] || '').length) && (
-                  <span className="font-serif font-light italic text-3xl md:text-4xl text-dim lowercase">
-                    {className.substring((className.split(' ')[0] || '').length)}
-                  </span>
-                )}
+              <h1 className="text-2xl font-bold text-text mb-0.5 select-none">
+                {className}
               </h1>
               {ownerName && (
-                <p className="editorial-text-spaced text-dim text-[9px] mt-1 select-none">Owned by {ownerName}</p>
+                <p className="text-sub text-xs">Owned by {ownerName}</p>
               )}
             </div>
           </div>
 
           {/* Class Info Bar */}
-          <div className="flex items-center gap-4 text-sm text-dim ml-12">
+          <div className="flex items-center gap-4 text-xs text-sub ml-9">
             {classData?.memberCount && (
-              <span className="flex items-center gap-1.5">
-                <Users size={14} />
+              <span className="flex items-center gap-1">
+                <Users size={12} />
                 {classData.memberCount} members
               </span>
             )}
             {classData?.classCode && (
-              <span className="px-2.5 py-0.5 bg-surface border border-border/50 rounded-none font-mono text-xs text-sub">
+              <span className="px-2 py-0.5 bg-surface border border-border rounded font-mono text-xs text-sub">
                 {classData.classCode}
               </span>
             )}
           </div>
 
           {/* Breadcrumbs */}
-          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-sub text-[15px] mt-3 ml-12">
+          <div className="flex flex-wrap items-center gap-1.5 text-sub text-sm mt-2 ml-9">
             {getBreadcrumbs().map((label, idx) => (
               <span key={idx} className="flex items-center gap-1.5">
-                {idx > 0 && <ChevronRight size={16} className="text-dim" />}
+                {idx > 0 && <ChevronRight size={14} className="text-dim" />}
                 <button
                   onClick={() => {
                     const newHistory = pathHistory.slice(0, idx + 1);
                     const newPath = newHistory[newHistory.length - 1];
                     setSearchParams({ classId, className, folder: newPath });
                   }}
-                  className={`hover:text-primary transition-colors truncate max-w-[150px] font-medium ${idx === pathHistory.length - 1 ? 'text-primary' : ''}`}
+                  className={`hover:text-text transition-colors truncate max-w-[150px] font-medium ${idx === pathHistory.length - 1 ? 'text-text font-semibold' : ''}`}
                 >
                   {label}
                 </button>
@@ -296,34 +282,34 @@ export default function ClassNotesScreen() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0 hide-scrollbar select-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar select-none">
           {pathHistory.length > 1 && (
-            <button onClick={goBack} className="flex shrink-0 items-center gap-1 md:gap-2 text-text hover:bg-surface/50 px-3 md:px-4 py-2 rounded-none border border-border/40 transition-colors font-medium text-xs uppercase tracking-wider">
-              <ArrowLeft size={16} />
-              <span className="hidden md:inline">Back</span>
+            <button onClick={goBack} className="flex items-center gap-1 text-text hover:bg-surface px-3 py-1.5 rounded border border-border transition-colors font-medium text-xs">
+              <ArrowLeft size={14} />
+              <span>Back</span>
             </button>
           )}
 
           {/* Edit Mode Toggle */}
           <button
             onClick={() => setIsEditMode(!isEditMode)}
-            className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-none font-medium transition-all duration-300 text-xs uppercase tracking-wider ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-medium text-xs transition-colors ${
               isEditMode
                 ? 'bg-text text-bg'
-                : 'bg-surface hover:bg-border/20 text-text border border-border/50'
+                : 'bg-surface hover:bg-border/30 text-text border border-border'
             }`}
           >
-            {isEditMode ? <Check size={16} /> : <Pencil size={16} />}
+            {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
             <span>{isEditMode ? 'Done' : 'Edit'}</span>
           </button>
 
           {isEditMode && (
             <>
-              <button onClick={handleCreateFolder} className="flex shrink-0 items-center gap-1 md:gap-2 bg-surface hover:bg-border/20 text-text px-3 md:px-4 py-2 rounded-none font-medium transition-colors border border-border/50 text-xs uppercase tracking-wider">
-                <Plus size={16} /> <span className="hidden md:inline">Folder</span>
+              <button onClick={handleCreateFolder} className="flex items-center gap-1 bg-surface hover:bg-border/30 text-text px-3 py-1.5 rounded font-medium text-xs border border-border transition-colors">
+                <Plus size={14} /> <span>Folder</span>
               </button>
-              <button onClick={handleCreateNote} className="flex shrink-0 items-center gap-1 md:gap-2 bg-text text-bg px-3 md:px-4 py-2 rounded-none font-medium transition-colors text-xs uppercase tracking-wider">
-                <Plus size={16} /> <span className="hidden md:inline">Note</span>
+              <button onClick={handleCreateNote} className="flex items-center gap-1 bg-text text-bg px-3 py-1.5 rounded font-medium text-xs transition-colors">
+                <Plus size={14} /> <span>Note</span>
               </button>
             </>
           )}
@@ -333,50 +319,47 @@ export default function ClassNotesScreen() {
       {/* Content */}
       <div>
         {error && (
-          <div className="mb-6 p-4 bg-red/10 text-red rounded-2xl border border-red/20 flex items-start gap-3">
-            <div className="mt-0.5"><Folder size={18} /></div>
-            <div>{error}</div>
+          <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm">
+            {error}
           </div>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-20 select-none">
+          <div className="flex justify-center py-16">
             <UtopiaLoader />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.length === 0 ? (
-              <div className="col-span-full py-20 text-center text-dim bg-surface border border-border rounded-none border-dashed">
+              <div className="col-span-full py-12 text-center text-sub bg-surface/40 border border-border rounded">
                 {isEditMode ? 'No notes yet. Create one to get started!' : 'This class has no notes yet.'}
               </div>
             ) : (
               items.map((item, idx) => {
-                const style = colorPalette[idx % colorPalette.length];
-
                 return (
                   <div
                     key={item.path || idx}
                     onClick={() => navigateTo(item)}
-                    className="card-premium-mono rounded-none p-5 flex items-center gap-4 cursor-pointer group"
+                    className="card-premium-mono rounded p-4 flex items-center gap-3 cursor-pointer group"
                   >
-                    <div className={`w-12 h-12 rounded-none flex items-center justify-center ${style.bg} ${style.text}`}>
+                    <div className="w-9 h-9 rounded flex items-center justify-center bg-surface border border-border text-text shrink-0">
                       {getIconForItem(item.path, item.name, item.type)}
                     </div>
-                    <div className="flex-1 min-w-0 flex items-center h-full">
-                      <h3 className="text-text font-serif font-light italic truncate text-[15px] lowercase tracking-tight select-none">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-text font-medium text-sm truncate">
                         {formatDisplayName(item.name)}
                       </h3>
                     </div>
 
                     {isEditMode && (
-                      <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {item.type === 'file' && (
-                          <button onClick={(e) => handleRename(e, item)} className="p-1.5 text-dim hover:text-text hover:bg-surface rounded-none">
-                            <Edit2 size={13} />
+                          <button onClick={(e) => handleRename(e, item)} className="p-1 text-sub hover:text-text rounded">
+                            <Edit2 size={14} />
                           </button>
                         )}
-                        <button onClick={(e) => handleDelete(e, item)} className="p-1.5 text-dim hover:text-text hover:bg-surface rounded-none">
-                          <Trash2 size={13} />
+                        <button onClick={(e) => handleDelete(e, item)} className="p-1 text-sub hover:text-text rounded">
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     )}

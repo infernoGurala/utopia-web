@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import UtopiaLoader from '../components/UtopiaLoader';
 
 export default function NoteEditorScreen() {
   const { user } = useAuth();
@@ -181,8 +182,8 @@ export default function NoteEditorScreen() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex justify-center py-16">
+        <UtopiaLoader />
       </div>
     );
   }
@@ -197,43 +198,43 @@ export default function NoteEditorScreen() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
-            <button onClick={handleBack} className="p-2 -ml-2 text-text hover:bg-surface/50 rounded-full transition-colors">
-              <ArrowLeft size={22} />
+    <div className="max-w-4xl mx-auto font-sans">
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBack} className="p-1.5 text-sub hover:text-text hover:bg-surface rounded transition-colors" title="Back">
+              <ArrowLeft size={20} />
             </button>
-            <h1 className="text-2xl font-bold text-text truncate max-w-lg">
+            <h1 className="text-xl font-bold text-text truncate max-w-lg">
               {path ? path.split('/').pop().replace(/\.md$/i, '') : 'Note'}
             </h1>
           </div>
           
           {isEditing ? (
-            <button onClick={handleSave} className="flex items-center gap-2 bg-green/20 text-green px-4 py-2 rounded-xl font-medium transition-colors hover:bg-green/30">
-              <Save size={18} /> Save
+            <button onClick={handleSave} className="flex items-center gap-1.5 bg-green/20 text-green px-3 py-1.5 rounded font-medium text-sm transition-colors hover:bg-green/30">
+              <Save size={16} /> Save
             </button>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-primary/20 text-primary px-4 py-2 rounded-xl font-medium transition-colors hover:bg-primary/30">
-              <Edit3 size={18} /> Edit
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 btn-premium-mono-outline px-3 py-1.5 rounded text-sm transition-colors">
+              <Edit3 size={16} /> Edit
             </button>
           )}
         </div>
 
         {/* Breadcrumb Trail */}
         {breadcrumbHistory.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 text-sub text-sm font-medium ml-10">
+          <div className="flex flex-wrap items-center gap-1.5 text-sub text-xs ml-8">
             {breadcrumbHistory.map((item, idx) => (
               <span key={idx} className="flex items-center gap-1.5">
-                {idx > 0 && <ChevronRight size={14} className="text-dim shrink-0" />}
+                {idx > 0 && <ChevronRight size={12} className="text-dim shrink-0" />}
                 {item.isActive ? (
-                  <span className="text-primary truncate max-w-[150px] font-semibold">
+                  <span className="text-text truncate max-w-[150px] font-medium">
                     {item.label}
                   </span>
                 ) : (
                   <button
                     onClick={() => navigate(item.url)}
-                    className="hover:text-primary transition-colors truncate max-w-[150px]"
+                    className="hover:text-text transition-colors truncate max-w-[150px]"
                   >
                     {item.label}
                   </button>
@@ -245,49 +246,45 @@ export default function NoteEditorScreen() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red/10 text-red rounded-2xl border border-red/20">
+        <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm">
           {error}
         </div>
       )}
 
-      <div className="bg-surface/30 border border-border/40 rounded-3xl p-8 min-h-[60vh]">
+      <div className="card-premium-mono rounded p-6 min-h-[60vh]">
         {isEditing ? (
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full h-[60vh] bg-transparent border-none outline-none resize-none text-text font-mono"
+            className="w-full h-[60vh] bg-transparent border-none outline-none resize-none text-text font-mono text-sm leading-relaxed"
             placeholder="Type your markdown here..."
           />
         ) : (
           <>
             {pdfLinks.length > 0 && (
-              <div className="mb-8 space-y-3">
+              <div className="mb-6 space-y-2">
                 {pdfLinks.map((pdf, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-2xl">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2.5 bg-primary/20 text-primary rounded-xl shrink-0">
-                        <FileText size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-text text-sm truncate">{pdf.text}</h3>
-                      </div>
+                  <div key={idx} className="flex items-center justify-between p-3 bg-surface border border-border rounded">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText size={18} className="text-text shrink-0" />
+                      <h3 className="font-medium text-text text-sm truncate">{pdf.text}</h3>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
                       <button 
                         onClick={() => setPdfPreviewUrl(pdfPreviewUrl === pdf.url ? null : pdf.url)}
-                        className={`p-2 rounded-xl transition-colors flex items-center justify-center ${pdfPreviewUrl === pdf.url ? 'bg-primary/20 text-primary' : 'bg-surface hover:bg-border/50 text-text'}`}
-                        title="View in same window"
+                        className={`p-1.5 rounded transition-colors ${pdfPreviewUrl === pdf.url ? 'bg-text text-bg' : 'text-sub hover:text-text hover:bg-bg'}`}
+                        title="Toggle Preview"
                       >
-                        {pdfPreviewUrl === pdf.url ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {pdfPreviewUrl === pdf.url ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                       <a 
                         href={pdf.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="p-2 bg-primary text-bg rounded-xl transition-colors hover:scale-105 flex items-center justify-center"
-                        title="Open in new window full screen"
+                        className="p-1.5 text-sub hover:text-text rounded transition-colors"
+                        title="Open in new window"
                       >
-                        <ExternalLink size={18} />
+                        <ExternalLink size={16} />
                       </a>
                     </div>
                   </div>
@@ -296,9 +293,9 @@ export default function NoteEditorScreen() {
             )}
             
             {pdfPreviewUrl && (
-              <div className="mb-8 rounded-2xl overflow-hidden border border-border/50 h-[70vh] bg-surface relative">
-                <div className="absolute top-0 left-0 right-0 bg-surface/80 backdrop-blur-md border-b border-border p-2 flex justify-end z-10">
-                  <button onClick={() => setPdfPreviewUrl(null)} className="px-3 py-1.5 bg-red/10 text-red hover:bg-red/20 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors">
+              <div className="mb-6 rounded border border-border h-[65vh] bg-surface relative">
+                <div className="absolute top-0 left-0 right-0 bg-surface border-b border-border p-2 flex justify-end z-10">
+                  <button onClick={() => setPdfPreviewUrl(null)} className="px-2.5 py-1 text-red hover:bg-red/10 rounded text-xs font-medium transition-colors">
                     Close Preview
                   </button>
                 </div>
@@ -310,7 +307,7 @@ export default function NoteEditorScreen() {
               </div>
             )}
 
-            <div className="prose prose-primary max-w-none">
+            <div className="prose max-w-none text-sm">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -331,7 +328,7 @@ const getFilteredContent = (rawContent) => {
   const filteredLines = [];
   
   const isPdfLinkLine = (line) => {
-    const trimmed = line.trim().replace(/^[-*+\d.]\s+/, ''); // strip list bullet
+    const trimmed = line.trim().replace(/^[-*+\d.]\s+/, '');
     return /^\[[^\]]+\]\([^)]+\.pdf(?:[^)]*)?\)$/i.test(trimmed);
   };
 
