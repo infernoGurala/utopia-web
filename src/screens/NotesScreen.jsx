@@ -165,12 +165,18 @@ export default function NotesScreen() {
           setFolderIcons({});
         }
       } else {
-        const [contents, icons] = await Promise.all([
+        const uniId = userProfile?.selectedUniversityId || path.split('/')[0] || '';
+        const trashService = uniId ? new TrashService(uniId) : null;
+
+        const [contents, icons, trashedPaths] = await Promise.all([
           SupabaseGlobalService.getDirectoryContents(path),
-          SupabaseGlobalService.getFolderIcons(path)
+          SupabaseGlobalService.getFolderIcons(path),
+          trashService ? trashService.getTrashedPaths().catch(() => new Set()) : Promise.resolve(new Set())
         ]);
+
         if (latestFetchedPath.current === path) {
-          setItems(contents);
+          const visibleContents = contents.filter(item => !trashedPaths.has(item.path));
+          setItems(visibleContents);
           setFolderIcons(icons);
         }
       }

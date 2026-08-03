@@ -9,7 +9,8 @@ export class SupabaseGlobalService {
     const { data, error } = await supabase
       .from('folders')
       .select('path')
-      .eq('scope', 'university');
+      .eq('scope', 'university')
+      .or('is_hidden.eq.false,is_hidden.is.null');
 
     if (error) throw error;
     
@@ -28,30 +29,38 @@ export class SupabaseGlobalService {
    */
   static async getDirectoryContents(directoryPath) {
     const supabase = getSupabase();
+    const cleanPath = (directoryPath || '').trim().replace(/\/+$/, '');
     
-    // Fetch child folders and notes in parallel to eliminate database waterfall delays
-    const [foldersRes, notesRes] = await Promise.all([
-      supabase
-        .from('folders')
-        .select('*')
-        .eq('parent_path', directoryPath)
-        .eq('is_hidden', false)
-        .order('sort_index', { ascending: true })
-        .order('name', { ascending: true }),
-      supabase
-        .from('notes')
-        .select('name, path, updated_at, sort_index')
-        .eq('folder_path', directoryPath)
-        .order('sort_index', { ascending: true })
-        .order('name', { ascending: true })
-    ]);
+    let folderQuery = supabase
+      .from('folders')
+      .select('*')
+      .or('is_hidden.eq.false,is_hidden.is.null')
+      .order('sort_index', { ascending: true })
+      .order('name', { ascending: true });
+
+    let notesQuery = supabase
+      .from('notes')
+      .select('name, path, updated_at, sort_index')
+      .or('is_hidden.eq.false,is_hidden.is.null')
+      .order('sort_index', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (!cleanPath) {
+      folderQuery = folderQuery.is('parent_path', null);
+      notesQuery = notesQuery.is('folder_path', null);
+    } else {
+      folderQuery = folderQuery.eq('parent_path', cleanPath);
+      notesQuery = notesQuery.eq('folder_path', cleanPath);
+    }
+
+    const [foldersRes, notesRes] = await Promise.all([folderQuery, notesQuery]);
 
     if (foldersRes.error) throw foldersRes.error;
     if (notesRes.error) throw notesRes.error;
 
     const items = [
-      ...foldersRes.data.map(f => ({ ...f, type: 'dir' })),
-      ...notesRes.data.map(n => ({ ...n, type: 'file' }))
+      ...(foldersRes.data || []).map(f => ({ ...f, type: 'dir' })),
+      ...(notesRes.data || []).map(n => ({ ...n, type: 'file' }))
     ];
 
     return items;
@@ -71,10 +80,13 @@ export class SupabaseGlobalService {
 
   static async getFolderIcons(pathPrefix) {
     const supabase = getSupabase();
+    const cleanPath = (pathPrefix || '').trim().replace(/\/+$/, '');
+    if (!cleanPath) return {};
+
     const { data, error } = await supabase
       .from('folder_icons')
       .select('folder_path, icon_key')
-      .like('folder_path', `${pathPrefix}%`);
+      .like('folder_path', `${cleanPath}%`);
 
     if (error) throw error;
     
