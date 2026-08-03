@@ -34,14 +34,13 @@ export class SupabaseGlobalService {
     let folderQuery = supabase
       .from('folders')
       .select('*')
-      .or('is_hidden.eq.false,is_hidden.is.null')
+      .eq('is_hidden', false)
       .order('sort_index', { ascending: true })
       .order('name', { ascending: true });
 
     let notesQuery = supabase
       .from('notes')
       .select('name, path, updated_at, sort_index')
-      .or('is_hidden.eq.false,is_hidden.is.null')
       .order('sort_index', { ascending: true })
       .order('name', { ascending: true });
 
@@ -49,8 +48,8 @@ export class SupabaseGlobalService {
       folderQuery = folderQuery.is('parent_path', null);
       notesQuery = notesQuery.is('folder_path', null);
     } else {
-      folderQuery = folderQuery.eq('parent_path', cleanPath);
-      notesQuery = notesQuery.eq('folder_path', cleanPath);
+      folderQuery = folderQuery.in('parent_path', [cleanPath, `${cleanPath}/`]);
+      notesQuery = notesQuery.in('folder_path', [cleanPath, `${cleanPath}/`]);
     }
 
     const [foldersRes, notesRes] = await Promise.all([folderQuery, notesQuery]);

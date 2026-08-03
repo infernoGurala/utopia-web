@@ -165,14 +165,25 @@ export default function NotesScreen() {
           setFolderIcons({});
         }
       } else {
-        const uniId = userProfile?.selectedUniversityId || path.split('/')[0] || '';
-        const trashService = uniId ? new TrashService(uniId) : null;
+        const contents = await SupabaseGlobalService.getDirectoryContents(path);
+        
+        let icons = {};
+        try {
+          icons = await SupabaseGlobalService.getFolderIcons(path);
+        } catch (e) {
+          console.warn('Failed to load folder icons:', e);
+        }
 
-        const [contents, icons, trashedPaths] = await Promise.all([
-          SupabaseGlobalService.getDirectoryContents(path),
-          SupabaseGlobalService.getFolderIcons(path),
-          trashService ? trashService.getTrashedPaths().catch(() => new Set()) : Promise.resolve(new Set())
-        ]);
+        let trashedPaths = new Set();
+        try {
+          const uniId = userProfile?.selectedUniversityId || path.split('/')[0] || '';
+          if (uniId) {
+            const trashService = new TrashService(uniId);
+            trashedPaths = await trashService.getTrashedPaths();
+          }
+        } catch (e) {
+          console.warn('Failed to load trash paths:', e);
+        }
 
         if (latestFetchedPath.current === path) {
           const visibleContents = contents.filter(item => !trashedPaths.has(item.path));
