@@ -1,100 +1,47 @@
 import { useState, useEffect, useRef } from 'react';
-import { SupabaseGlobalService } from '../services/SupabaseGlobalService';
-import { TrashService } from '../services/TrashService';
-import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Edit2, Trash2, Check, Pencil, Users, Crown, Pen, Eye } from 'lucide-react';
+import { GoogleDriveService, ROOT_FOLDER_ID } from '../services/GoogleDriveService';
+import { Folder, FileText, ArrowLeft, ChevronRight, Plus, Search, Users, Crown, Pen, Eye, ExternalLink, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getLucideIcon } from '../utils/IconMap';
-import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, getDocs, doc, getDoc, query, where, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import TrashScreen from './TrashScreen';
 import UtopiaLoader from '../components/UtopiaLoader';
 
 export default function NotesScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { userProfile } = useTheme();
   const { user } = useAuth();
   
   // Tab state: 'community' or 'classes'
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'community');
-  const latestFetchedPath = useRef('');
+  const latestFetchedFolderId = useRef('');
 
-  // --- Community Notes States ---
+  // --- Google Drive Community Notes States ---
   const [items, setItems] = useState([]);
-  const [folderIcons, setFolderIcons] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [showTrash, setShowTrash] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const defaultUni = userProfile?.selectedUniversityId ? `${userProfile.selectedUniversityId}/Community` : '';
+  // Folder ID & Navigation History
+  const initialFolderId = searchParams.get('folderId') || ROOT_FOLDER_ID;
+  const initialFolderName = searchParams.get('folderName') || 'Home';
   
-  // Reconstruct path history on mount if folder param is present in URL
-  const getInitialPathHistory = () => {
-    const folder = searchParams.get('folder');
-    if (folder) {
-      const parts = folder.split('/');
-      const history = [];
-      let running = '';
-      for (let i = 0; i < parts.length; i++) {
-        if (parts[i] === 'Community' && i > 0) {
-          running = `${parts[i-1]}/Community`;
-          history.push(running);
-        } else if (running) {
-          running = `${running}/${parts[i]}`;
-          history.push(running);
-        }
-      }
-      if (history.length > 0) return history;
-      return [folder];
-    }
-    return [defaultUni];
-  };
-
-  const [currentPath, setCurrentPath] = useState(searchParams.get('folder') || defaultUni);
-  const [pathHistory, setPathHistory] = useState(getInitialPathHistory());
+  const [currentFolderId, setCurrentFolderId] = useState(initialFolderId);
+  const [pathHistory, setPathHistory] = useState([
+    { id: ROOT_FOLDER_ID, name: 'Home' }
+  ]);
 
   // --- Class List States ---
   const [classes, setClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(true);
   const [classesError, setClassesError] = useState('');
 
-  // --- Search & Filter States ---
-  const searchQuery = '';
-
-  // --- Recent Notes States ---
-  const [recentNotes, setRecentNotes] = useState([]);
-
   // --- Join Class States ---
   const [joinCode, setJoinCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [joinSuccess, setJoinSuccess] = useState('');
-
-  // Load recent notes
-  useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`utopia_recent_notes_${user.uid}`);
-      if (stored) {
-        setRecentNotes(JSON.parse(stored));
-      }
-    }
-  }, [user]);
-
-  const addToRecentNotes = (item) => {
-    if (item.type !== 'file') return;
-    const newRecent = [
-      { path: item.path, name: item.name, timestamp: new Date().getTime() },
-      ...recentNotes.filter(n => n.path !== item.path)
-    ].slice(0, 5); // keep last 5
-    setRecentNotes(newRecent);
-    localStorage.setItem(`utopia_recent_notes_${user.uid}`, JSON.stringify(newRecent));
-  };
-
-  // Derive universityId from the path for trash operations
-  const universityId = userProfile?.selectedUniversityId || currentPath?.split('/')[0] || '';
 
   // Synchronize Tab and URL params
   useEffect(() => {
@@ -106,44 +53,36 @@ export default function NotesScreen() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setSearchParams({ tab });
+    setSearchParams({ tab, folderId: currentFolderId });
   };
 
-  // --- Community Notes Effects ---
-  useEffect(() => {
-    if (userProfile) {
-      const newUni = userProfile.selectedUniversityId ? `${userProfile.selectedUniversityId}/Community` : '';
-      const folderParam = searchParams.get('folder');
-      if (folderParam) {
-        setCurrentPath(folderParam);
-        const parts = folderParam.split('/');
-        const history = [];
-        let running = '';
-        for (let i = 0; i < parts.length; i++) {
-          if (parts[i] === 'Community' && i > 0) {
-            running = `${parts[i-1]}/Community`;
-            history.push(running);
-          } else if (running) {
-            running = `${running}/${parts[i]}`;
-            history.push(running);
-          }
-        }
-        if (history.length === 0) {
-          history.push(folderParam);
-        }
-        setPathHistory(history);
-      } else if (newUni) {
-        setCurrentPath(newUni);
-        setPathHistory([newUni]);
+  // --- Fetch Directory Contents from Google Drive ---
+  const loadDirectory = async (folderId) => {
+    latestFetchedFolderId.current = folderId;
+    setLoading(true);
+    setError('');
+    try {
+      const contents = await GoogleDriveService.getDirectoryContents(folderId);
+      if (latestFetchedFolderId.current === folderId) {
+        setItems(contents);
+      }
+    } catch (err) {
+      console.error("Failed to load Google Drive directory:", err);
+      if (latestFetchedFolderId.current === folderId) {
+        setError(err.message || 'Failed to load folders from Google Drive.');
+      }
+    } finally {
+      if (latestFetchedFolderId.current === folderId) {
+        setLoading(false);
       }
     }
-  }, [userProfile, searchParams]);
+  };
 
   useEffect(() => {
     if (activeTab === 'community') {
-      loadDirectory(currentPath);
+      loadDirectory(currentFolderId);
     }
-  }, [currentPath, activeTab]);
+  }, [currentFolderId, activeTab]);
 
   // --- Class List Effects ---
   useEffect(() => {
@@ -152,58 +91,6 @@ export default function NotesScreen() {
     }
   }, [user, activeTab]);
 
-  // --- Fetch Directory Contents ---
-  const loadDirectory = async (path) => {
-    latestFetchedPath.current = path;
-    setLoading(true);
-    setError('');
-    try {
-      if (!path || path === '') {
-        const unis = await SupabaseGlobalService.getUniversities();
-        if (latestFetchedPath.current === path) {
-          setItems(unis.map(u => ({ ...u, type: 'dir', name: u.path.split('/')[0] })));
-          setFolderIcons({});
-        }
-      } else {
-        const contents = await SupabaseGlobalService.getDirectoryContents(path);
-        
-        let icons = {};
-        try {
-          icons = await SupabaseGlobalService.getFolderIcons(path);
-        } catch (e) {
-          console.warn('Failed to load folder icons:', e);
-        }
-
-        let trashedPaths = new Set();
-        try {
-          const uniId = userProfile?.selectedUniversityId || path.split('/')[0] || '';
-          if (uniId) {
-            const trashService = new TrashService(uniId);
-            trashedPaths = await trashService.getTrashedPaths();
-          }
-        } catch (e) {
-          console.warn('Failed to load trash paths:', e);
-        }
-
-        if (latestFetchedPath.current === path) {
-          const visibleContents = contents.filter(item => !trashedPaths.has(item.path));
-          setItems(visibleContents);
-          setFolderIcons(icons);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      if (latestFetchedPath.current === path) {
-        setError('Failed to load community notes.');
-      }
-    } finally {
-      if (latestFetchedPath.current === path) {
-        setLoading(false);
-      }
-    }
-  };
-
-  // --- Fetch Class List ---
   const loadClasses = async () => {
     setClassesLoading(true);
     setClassesError('');
@@ -290,137 +177,62 @@ export default function NotesScreen() {
 
   const navigateTo = (item) => {
     if (item.type === 'dir') {
-      const newPath = !currentPath || currentPath === '' ? `${item.name}/Community` : item.path;
-      setPathHistory([...pathHistory, newPath]);
-      setCurrentPath(newPath);
-      setSearchParams({ tab: activeTab, folder: newPath });
+      const nextHistory = [...pathHistory, { id: item.id, name: item.name }];
+      setPathHistory(nextHistory);
+      setCurrentFolderId(item.id);
+      setSearchParams({ tab: activeTab, folderId: item.id, folderName: item.name });
     } else {
-      addToRecentNotes(item);
-      navigate(`/app/note?path=${encodeURIComponent(item.path)}`);
+      if (item.mimeType === 'application/pdf' || item.name.toLowerCase().endsWith('.pdf')) {
+        if (item.webViewLink) {
+          window.open(item.webViewLink, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        navigate(`/app/note?fileId=${item.id}&name=${encodeURIComponent(item.name)}&folderId=${currentFolderId}`);
+      }
     }
   };
 
   const goBack = () => {
     if (pathHistory.length > 1) {
-      const newHistory = [...pathHistory];
-      newHistory.pop();
-      setPathHistory(newHistory);
-      const newPath = newHistory[newHistory.length - 1];
-      setCurrentPath(newPath);
-      setSearchParams({ tab: activeTab, folder: newPath });
+      const nextHistory = [...pathHistory];
+      nextHistory.pop();
+      setPathHistory(nextHistory);
+      const parent = nextHistory[nextHistory.length - 1];
+      setCurrentFolderId(parent.id);
+      setSearchParams({ tab: activeTab, folderId: parent.id, folderName: parent.name });
     }
   };
 
-  const handleCreateFolder = async () => {
-    if (!currentPath) return;
-    const name = prompt("Enter folder name:");
-    if (!name) return;
-    try {
-      await SupabaseGlobalService.createFolder(`${currentPath}/${name}`, name, currentPath, user.uid);
-      loadDirectory(currentPath);
-    } catch (err) {
-      setError("Failed to create folder");
-    }
-  };
-
-  const handleCreateNote = async () => {
-    if (!currentPath) return;
-    const name = prompt("Enter note name:");
-    if (!name) return;
-    try {
-      await SupabaseGlobalService.createNote(`${currentPath}/${name}.md`, `${name}.md`, currentPath, user.uid);
-      loadDirectory(currentPath);
-    } catch (err) {
-      setError("Failed to create note");
-    }
-  };
-
-  const handleRename = async (e, item) => {
-    e.stopPropagation();
-    const newName = prompt("Enter new name:", item.name);
-    if (!newName || newName === item.name) return;
-    try {
-      if (item.type === 'file') {
-        const newPath = `${item.folder_path}/${newName}`;
-        await SupabaseGlobalService.renameNote(item.path, newName, newPath);
-      } else {
-        setError("Folder renaming is complex and disabled in MVP");
-      }
-      loadDirectory(currentPath);
-    } catch (err) {
-      setError("Failed to rename");
-    }
-  };
-
-  const handleDelete = async (e, item) => {
-    e.stopPropagation();
-    
-    if (universityId) {
-      const confirmTrash = window.confirm(`Move "${formatDisplayName(item.name)}" to trash?`);
-      if (!confirmTrash) return;
-      try {
-        const trashService = new TrashService(universityId);
-        await trashService.moveToTrash({
-          path: item.path,
-          name: item.name,
-          type: item.type === 'dir' ? 'dir' : 'file',
-        });
-        loadDirectory(currentPath);
-      } catch (err) {
-        console.error('Failed to move to trash:', err);
-        setError("Failed to move to trash");
-      }
-    } else {
-      const confirmDelete = window.confirm(`Are you sure you want to permanently delete ${item.name}?`);
-      if (!confirmDelete) return;
-      try {
-        if (item.type === 'file') {
-          await SupabaseGlobalService.deleteNote(item.path);
-        } else {
-          await SupabaseGlobalService.deleteFolder(item.path);
-        }
-        loadDirectory(currentPath);
-      } catch (err) {
-        setError("Failed to delete");
-      }
-    }
-  };
-
-  const getIconForItem = (path, name, type) => {
-    const override = folderIcons[path];
-    if (override) {
-      return getLucideIcon(override, 20);
-    }
-
-    const key = name.toLowerCase();
-    if (key.includes('thermo')) return getLucideIcon('local_fire', 20);
-    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 20);
-    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 20);
-    if (key.includes('chemistry') || key.includes('chem')) return getLucideIcon('science', 20);
-    if (key.includes('economics') || key.includes('econ') || key.includes('manage')) return getLucideIcon('bar_chart', 20);
-    if (key.includes('code') || key.includes('programming') || key.includes('pps') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 20);
-    if (key.includes('iot') || key.includes('sensor') || key.includes('embedded')) return getLucideIcon('sensors', 20);
-    if (key.includes('physics') || key.includes('mechanics') || key.includes('dynamics')) return getLucideIcon('speed', 20);
-    if (key.includes('civil') || key.includes('structure') || key.includes('concrete')) return getLucideIcon('architecture', 20);
-    if (key.includes('lab')) return getLucideIcon('biotech', 20);
-    if (key.includes('design') || key.includes('drawing') || key.includes('cad')) return getLucideIcon('draw', 20);
-    if (key.includes('network') || key.includes('computer network')) return getLucideIcon('lan', 20);
-    if (key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 20);
-    if (key.includes('operating') || key.includes('os')) return getLucideIcon('developer_board', 20);
-    if (key.includes('machine') || key.includes('manufacturing') || key.includes('workshop')) return getLucideIcon('precision_mfg', 20);
-    if (key.includes('english') || key.includes('communication') || key.includes('language')) return getLucideIcon('language', 20);
-    if (key.includes('exam') || key.includes('prep') || key.includes('question') || key.includes('bank')) return getLucideIcon('quiz', 20);
-    if (key.includes('archive')) return getLucideIcon('archive', 20);
-    if (key.includes('doc')) return getLucideIcon('school', 20);
-    if (key.includes('sem')) return getLucideIcon('bookmark', 20);
-    if (key.includes('unit')) return getLucideIcon('topic', 20);
-
-    return type === 'file' ? <FileText size={20} /> : <Folder size={20} />;
+  const jumpToBreadcrumb = (idx) => {
+    const nextHistory = pathHistory.slice(0, idx + 1);
+    setPathHistory(nextHistory);
+    const target = nextHistory[idx];
+    setCurrentFolderId(target.id);
+    setSearchParams({ tab: activeTab, folderId: target.id, folderName: target.name });
   };
 
   const formatDisplayName = (name) => {
     if (!name) return '';
-    return name.replace(/__[0-9a-f]{4}$/i, '').replace(/\.md$/i, '');
+    return name.replace(/\.md$/i, '').replace(/\.txt$/i, '');
+  };
+
+  const getIconForItem = (name, type, mimeType) => {
+    const key = name.toLowerCase();
+    if (mimeType === 'application/pdf' || key.endsWith('.pdf')) {
+      return <FileText size={20} className="text-red" />;
+    }
+    if (key.includes('ai') || key.includes('ml') || key.includes('machine learning')) return getLucideIcon('biotech', 20);
+    if (key.includes('cse') || key.includes('computer') || key.includes('code') || key.includes('software') || key.includes('dsa') || key.includes('algorithm')) return getLucideIcon('code', 20);
+    if (key.includes('data') || key.includes('database') || key.includes('dbms') || key.includes('sql')) return getLucideIcon('storage', 20);
+    if (key.includes('civil') || key.includes('structure') || key.includes('cad')) return getLucideIcon('architecture', 20);
+    if (key.includes('mech') || key.includes('thermo') || key.includes('fluid') || key.includes('workshop')) return getLucideIcon('speed', 20);
+    if (key.includes('math') || key.includes('calculus') || key.includes('algebra')) return getLucideIcon('math', 20);
+    if (key.includes('electric') || key.includes('beee') || key.includes('circuit')) return getLucideIcon('electrical', 20);
+    if (key.includes('chem')) return getLucideIcon('science', 20);
+    if (key.includes('sem')) return getLucideIcon('bookmark', 20);
+    if (key.includes('unit') || key.includes('module')) return getLucideIcon('topic', 20);
+
+    return type === 'file' ? <FileText size={20} /> : <Folder size={20} />;
   };
 
   const getRoleInfo = (cls) => {
@@ -433,6 +245,10 @@ export default function NotesScreen() {
     return { label: 'Reader', icon: <Eye size={12} />, style: 'border border-border text-sub' };
   };
 
+  const filteredItems = items.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="max-w-5xl font-sans">
       {/* Header */}
@@ -442,28 +258,17 @@ export default function NotesScreen() {
           
           {activeTab === 'community' ? (
             <div className="flex flex-wrap items-center gap-1.5 text-sub text-sm">
-              {pathHistory.map((path, idx) => {
-                const displayName = idx === 0 
-                  ? formatDisplayName(userProfile?.selectedUniversityId || 'University')
-                  : formatDisplayName(path.split('/').pop());
-
-                return (
-                  <span key={idx} className="flex items-center gap-1.5">
-                    {idx > 0 && <ChevronRight size={14} className="text-dim" />}
-                    <button 
-                      onClick={() => {
-                        const newHistory = pathHistory.slice(0, idx + 1);
-                        setPathHistory(newHistory);
-                        setCurrentPath(path);
-                        setSearchParams({ tab: activeTab, folder: path });
-                      }} 
-                      className="hover:text-text transition-colors truncate max-w-[150px] font-medium"
-                    >
-                      {displayName}
-                    </button>
-                  </span>
-                );
-              })}
+              {pathHistory.map((folder, idx) => (
+                <span key={folder.id} className="flex items-center gap-1.5">
+                  {idx > 0 && <ChevronRight size={14} className="text-dim" />}
+                  <button 
+                    onClick={() => jumpToBreadcrumb(idx)} 
+                    className={`hover:text-text transition-colors truncate max-w-[180px] ${idx === pathHistory.length - 1 ? 'text-text font-semibold' : 'font-medium'}`}
+                  >
+                    {folder.name}
+                  </button>
+                </span>
+              ))}
             </div>
           ) : (
             <p className="text-sub text-sm">Access your enrolled courses and view class-specific notes.</p>
@@ -472,10 +277,35 @@ export default function NotesScreen() {
         
         {/* Actions Menu */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
+          {activeTab === 'community' && (
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sub" />
+              <input
+                type="text"
+                placeholder="Search notes & folders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-3 py-1.5 bg-surface border border-border focus:border-text rounded text-xs text-text focus:outline-none transition-colors w-48 md:w-56"
+              />
+            </div>
+          )}
+
           {activeTab === 'community' && pathHistory.length > 1 && (
             <button onClick={goBack} className="flex items-center gap-1 text-text hover:bg-surface px-3 py-1.5 rounded border border-border text-xs font-medium transition-colors">
               <ArrowLeft size={14} />
               <span>Back</span>
+            </button>
+          )}
+
+          {activeTab === 'community' && (
+            <button 
+              onClick={() => loadDirectory(currentFolderId)} 
+              disabled={loading}
+              className="flex items-center bg-surface hover:bg-border/30 text-text px-3 py-1.5 rounded text-xs font-medium transition-colors border border-border gap-1"
+              title="Refresh Google Drive"
+            >
+              <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+              <span>Refresh</span>
             </button>
           )}
 
@@ -487,40 +317,6 @@ export default function NotesScreen() {
             >
               {classesLoading ? 'Loading...' : 'Refresh'}
             </button>
-          )}
-
-          {/* Edit Mode Toggle for Community Notes */}
-          {activeTab === 'community' && (
-            <button 
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                isEditMode 
-                  ? 'bg-text text-bg' 
-                  : 'bg-surface hover:bg-border/30 text-text border border-border'
-              }`}
-            >
-              {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
-              <span>{isEditMode ? 'Done' : 'Edit'}</span>
-            </button>
-          )}
-
-          {/* Edit mode actions for Community Notes */}
-          {activeTab === 'community' && isEditMode && currentPath && (
-            <>
-              <button 
-                onClick={() => setShowTrash(true)} 
-                className="flex items-center gap-1 text-sub hover:text-text hover:bg-surface px-3 py-1.5 rounded text-xs font-medium border border-border transition-colors"
-              >
-                <Trash2 size={14} />
-                <span>Trash</span>
-              </button>
-              <button onClick={handleCreateFolder} className="flex items-center gap-1 bg-surface hover:bg-border/30 text-text px-3 py-1.5 rounded text-xs font-medium border border-border transition-colors">
-                <Plus size={14} /> <span>Folder</span>
-              </button>
-              <button onClick={handleCreateNote} className="flex items-center gap-1 bg-text text-bg px-3 py-1.5 rounded text-xs font-medium transition-colors">
-                <Plus size={14} /> <span>Note</span>
-              </button>
-            </>
           )}
         </div>
       </div>
@@ -535,7 +331,7 @@ export default function NotesScreen() {
               : 'border-transparent text-sub hover:text-text'
           }`}
         >
-          Community
+          Google Drive Notes
         </button>
         <button
           onClick={() => handleTabChange('classes')}
@@ -554,8 +350,9 @@ export default function NotesScreen() {
         {activeTab === 'community' ? (
           <div>
             {error && (
-              <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm">
-                {error}
+              <div className="mb-4 p-3 bg-red/10 text-red rounded border border-red/20 text-sm flex items-center justify-between">
+                <span>{error}</span>
+                <button onClick={() => loadDirectory(currentFolderId)} className="text-xs font-semibold underline ml-2">Retry</button>
               </div>
             )}
 
@@ -565,40 +362,39 @@ export default function NotesScreen() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {items.filter(item => 
-                  formatDisplayName(item.name).toLowerCase().includes(searchQuery.toLowerCase())
-                ).length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <div className="col-span-full py-12 text-center text-sub bg-surface/40 border border-border rounded">
                     {searchQuery ? "No matching folders or notes found." : "This folder is empty."}
                   </div>
                 ) : (
-                  items.filter(item => 
-                    formatDisplayName(item.name).toLowerCase().includes(searchQuery.toLowerCase())
-                  ).map((item, idx) => {
+                  filteredItems.map((item) => {
+                    const isPdf = item.mimeType === 'application/pdf' || item.name.toLowerCase().endsWith('.pdf');
+
                     return (
                       <div 
-                        key={item.path || idx}
+                        key={item.id}
                         onClick={() => navigateTo(item)}
                         className="card-premium-mono rounded p-4 flex items-center gap-3 cursor-pointer group"
                       >
                         <div className="w-9 h-9 rounded flex items-center justify-center bg-surface border border-border text-text shrink-0">
-                          {getIconForItem(item.path, item.name, item.type)}
+                          {getIconForItem(item.name, item.type, item.mimeType)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="text-text font-medium text-sm truncate">{formatDisplayName(item.name)}</h3>
+                          {item.type === 'file' && (
+                            <p className="text-sub text-[11px] mt-0.5 truncate">
+                              {isPdf ? 'PDF Document' : 'Markdown Note'}
+                            </p>
+                          )}
                         </div>
                         
-                        {isEditMode && (
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {item.type === 'file' && (
-                              <button onClick={(e) => handleRename(e, item)} className="p-1 text-sub hover:text-text rounded cursor-pointer">
-                                <Edit2 size={14} />
-                              </button>
-                            )}
-                            <button onClick={(e) => handleDelete(e, item)} className="p-1 text-sub hover:text-text rounded cursor-pointer">
-                              <Trash2 size={14} />
-                            </button>
+                        {isPdf && (
+                          <div className="text-sub opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ExternalLink size={14} />
                           </div>
+                        )}
+                        {item.type === 'dir' && (
+                          <ChevronRight size={16} className="text-dim group-hover:translate-x-0.5 transition-transform" />
                         )}
                       </div>
                     );
@@ -691,15 +487,6 @@ export default function NotesScreen() {
           </div>
         )}
       </div>
-
-      {/* Trash Modal */}
-      {showTrash && universityId && (
-        <TrashScreen 
-          universityId={universityId} 
-          onClose={() => setShowTrash(false)}
-          onRestored={() => loadDirectory(currentPath)}
-        />
-      )}
     </div>
   );
 }
