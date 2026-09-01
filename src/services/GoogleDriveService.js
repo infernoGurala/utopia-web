@@ -76,7 +76,7 @@ export async function getAccessToken() {
   const header = { alg: "RS256", typ: "JWT" };
   const claimSet = {
     iss: SERVICE_ACCOUNT.client_email,
-    scope: "https://www.googleapis.com/auth/drive.readonly",
+    scope: "https://www.googleapis.com/auth/drive",
     aud: "https://oauth2.googleapis.com/token",
     exp: now + 3600,
     iat: now
@@ -137,7 +137,7 @@ export class GoogleDriveService {
     const cleanId = (folderId || ROOT_FOLDER_ID).trim();
     
     const query = encodeURIComponent(`'${cleanId}' in parents and trashed = false`);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink)&orderBy=folder,name&pageSize=100`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,modifiedTime,size,webViewLink,iconLink)&orderBy=folder,name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`;
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
@@ -167,13 +167,124 @@ export class GoogleDriveService {
   }
 
   /**
+   * Upload a file (File/Blob) directly to a Google Drive folder
+   * @param {File|Blob} file - The file object from input or drop event
+   * @param {string} folderId - Target Google Drive folder ID
+   * @param {string} [customName] - Optional override for file name
+   */
+  static async uploadFile(file, folderId = ROOT_FOLDER_ID, customName = null) {
+    const token = await getAccessToken();
+    const cleanFolderId = (folderId || ROOT_FOLDER_ID).trim();
+    const fileName = customName || file.name || `note_${Date.now()}.md`;
+    
+    // Resolve proper MIME type
+    let mimeType = file.type || 'application/octet-stream';
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.endsWith('.md')) mimeType = 'text/markdown';
+    else if (lowerName.endsWith('.txt')) mimeType = 'text/plain';
+    else if (lowerName.endsWith('.pdf')) mimeType = 'application/pdf';
+    else if (lowerName.endsWith('.png')) mimeType = 'image/png';
+    else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) mimeType = 'image/jpeg';
+
+    const metadata = {
+      name: fileName,
+      mimeType: mimeType,
+      parents: [cleanFolderId]
+    };
+
+    const boundary = `-------utopia_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const closeDelim = `\r\n--${boundary}--`;
+
+    const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json; charset=UTF-8' });
+    const multipartBody = new Blob([
+      delimiter,
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n',
+      metadataBlob,
+      delimiter,
+      `Content-Type: ${mimeType}\r\n\r\n`,
+      file,
+      closeDelim
+    ], { type: `multipart/related; boundary=${boundary}` });
+
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: multipartBody
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 403 && data.error?.message?.includes('Insufficient permissions')) {
+        throw new Error(
+          "Permission Denied: Utopia's Google Drive service account needs 'Editor' permission on this Google Drive folder to upload files. Please share the folder with utopia-drive-reader@seventh-sensor-506706-k7.iam.gserviceaccount.com as Editor."
+        );
+      }
+      throw new Error(data.error?.message || `Upload failed with status ${res.status}`);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: 'file',
+      mimeType: data.mimeType,
+      parentId: cleanFolderId
+    };
+  }
+
+  /**
+   * Create a new folder in Google Drive
+   * @param {string} folderName 
+   * @param {string} parentFolderId 
+   */
+  static async createFolder(folderName, parentFolderId = ROOT_FOLDER_ID) {
+    const token = await getAccessToken();
+    const cleanParentId = (parentFolderId || ROOT_FOLDER_ID).trim();
+
+    const metadata = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [cleanParentId]
+    };
+
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(metadata)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 403 && data.error?.message?.includes('Insufficient permissions')) {
+        throw new Error(
+          "Permission Denied: Utopia's service account needs 'Editor' permission on this Google Drive folder to create folders."
+        );
+      }
+      throw new Error(data.error?.message || `Failed to create folder (${res.status})`);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: 'dir',
+      mimeType: data.mimeType,
+      parentId: cleanParentId
+    };
+  }
+
+  /**
    * Fetch raw file content (Markdown, text, etc.)
    * @param {string} fileId 
    */
   static async getFileContent(fileId) {
     if (!fileId) return '';
     const token = await getAccessToken();
-    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
@@ -193,7 +304,7 @@ export class GoogleDriveService {
   static async getFileMetadata(fileId) {
     if (!fileId) return null;
     const token = await getAccessToken();
-    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,modifiedTime,size,webViewLink`;
+    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,modifiedTime,size,webViewLink&supportsAllDrives=true`;
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
@@ -203,3 +314,4 @@ export class GoogleDriveService {
     return await res.json();
   }
 }
+
